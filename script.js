@@ -5,14 +5,33 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 let sb;
 try {
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log("Supabase conectado.");
 } catch (e) { console.error("Erro SB", e); }
 
 // GLOBAIS
 let currentUser = null;
 let currentOpType = ''; 
-let currentCurrency = 'BRL'; 
+let currentCurrency = 'BRL'; // 'BRL' ou 'PTS'
 let userOperations = []; 
+
+// --- MÁSCARA DE DINHEIRO (NOVA FUNÇÃO) ---
+// Isso faz o "R$ 3.000,00" aparecer enquanto digita
+document.addEventListener('DOMContentLoaded', () => {
+    const inputVal = document.getElementById('op-value');
+    if(inputVal) {
+        inputVal.addEventListener('input', function(e) {
+            // Se estiver em Pontos, não formata como dinheiro
+            if(currentCurrency === 'PTS') return;
+
+            let value = e.target.value.replace(/\D/g, ""); // Remove tudo que não é número
+            
+            // Divide por 100 para considerar os centavos
+            let number = Number(value) / 100;
+            
+            // Formata para BRL
+            e.target.value = number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        });
+    }
+});
 
 // --- INICIALIZAÇÃO ---
 async function init() {
@@ -42,18 +61,11 @@ async function login() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const msg = document.getElementById('msg-auth');
-    
     if(msg) msg.innerText = "Entrando...";
-    
     const { error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-        if(msg) msg.innerText = "Erro: " + error.message;
-    } else {
-        location.reload();
-    }
+    if (error) { if(msg) msg.innerText = error.message; } else { location.reload(); }
 }
 
-// --- AQUI ESTAVA O PROBLEMA DO NOME ---
 async function cadastro() {
     const nome = document.getElementById('reg-name').value;
     const phone = document.getElementById('reg-phone').value;
@@ -61,51 +73,19 @@ async function cadastro() {
     const password = document.getElementById('reg-password').value;
     const msg = document.getElementById('msg-auth');
 
-    // Validação
-    if(!nome || !email || !password) {
-        if(msg) msg.innerText = "Preencha Nome, Email e Senha obrigatórios.";
-        return;
-    }
-    if(password.length < 6) {
-        if(msg) msg.innerText = "Senha muito curta (mínimo 6).";
-        return;
-    }
+    if(!nome || !email || !password) return msg.innerText = "Preencha todos os dados.";
+    if(password.length < 6) return msg.innerText = "Senha curta.";
 
-    if(msg) msg.innerText = "Criando conta...";
-
-    // 1. Cria o Login (Auth)
+    msg.innerText = "Criando...";
     const { data, error } = await sb.auth.signUp({ email, password });
 
-    if (error) {
-        if(msg) msg.innerText = "Erro no Login: " + error.message;
-        return;
-    }
-
-    // 2. Tenta salvar o Perfil (Nome e Telefone)
+    if (error) { msg.innerText = error.message; return; }
     if (data.user) {
         try {
-            console.log("Tentando salvar perfil para:", nome);
-            
-            const { error: perfilError } = await sb.from('trader_perfil').insert([{ 
-                user_id: data.user.id, 
-                nome: nome,        // <--- AQUI VAI O NOME
-                telefone: phone,   // <--- AQUI VAI O TELEFONE
-                score: 0,
-                nivel: 'Iniciante'
-            }]);
-
-            if (perfilError) {
-                console.error("Erro ao salvar perfil:", perfilError);
-                // Se der erro aqui, é 99% certeza que o RLS está ativado
-                alert("Conta criada, mas o banco bloqueou o nome. Desative o RLS no Supabase!");
-            } else {
-                alert("Conta criada com sucesso! Faça login.");
-                toggleAuth('login');
-            }
-
-        } catch (err) {
-            console.error("Erro crítico:", err);
-        }
+            await sb.from('trader_perfil').insert([{ user_id: data.user.id, nome: nome, telefone: phone, score: 0, nivel: 'Iniciante' }]);
+            alert("Conta criada!");
+            toggleAuth('login');
+        } catch (err) { console.error(err); alert("Erro ao criar perfil. Tente logar."); }
     }
 }
 
@@ -117,16 +97,10 @@ window.setTab = function(tabName) {
     document.querySelectorAll('.pill').forEach(el => el.classList.remove('active'));
     
     const panel = document.getElementById('tab-' + tabName);
-    if(panel) {
-        panel.style.display = 'block';
-        setTimeout(() => panel.classList.add('active'), 10);
-    }
+    if(panel) { panel.style.display = 'block'; setTimeout(() => panel.classList.add('active'), 10); }
     
     const btns = document.querySelectorAll('.pill');
-    btns.forEach(b => {
-        if(b.innerText.toLowerCase().includes(tabName === 'home' ? 'visão' : (tabName === 'analytics' ? 'performance' : tabName))) 
-            b.classList.add('active');
-    });
+    btns.forEach(b => { if(b.innerText.toLowerCase().includes(tabName === 'home' ? 'visão' : tabName)) b.classList.add('active'); });
     
     if(tabName === 'analytics') renderChart();
     if(tabName === 'checklist') verificarChecklistDia();
@@ -135,34 +109,20 @@ window.setTab = function(tabName) {
 // --- DADOS ---
 async function carregarTudo() {
     if(!currentUser) return;
-
-    // Busca Perfil
-    let { data: perfil, error } = await sb.from('trader_perfil').select('*').eq('user_id', currentUser.id).single();
-
-    // FALLBACK DE SEGURANÇA (Só roda se o cadastro falhou antes)
-    if (!perfil || error) {
-        console.log("Perfil não encontrado. Criando provisório...");
-        const nomeProvisorio = currentUser.email.split('@')[0];
-        
-        // Tenta criar de novo
-        const { data: novo } = await sb.from('trader_perfil').insert([
-            { user_id: currentUser.id, nome: nomeProvisorio, score: 0, nivel: 'Iniciante' }
-        ]).select().single();
-        
-        perfil = novo || { nome: nomeProvisorio, score: 0, nivel: 'Iniciante' };
+    
+    // Perfil
+    let { data: perfil } = await sb.from('trader_perfil').select('*').eq('user_id', currentUser.id).single();
+    if (!perfil) {
+        const nomeProv = currentUser.email.split('@')[0];
+        const { data: novo } = await sb.from('trader_perfil').insert([{ user_id: currentUser.id, nome: nomeProv, score: 0 }]).select().single();
+        perfil = novo || { nome: nomeProv, score: 0, nivel: 'Iniciante' };
     }
 
-    // Exibe Nome
     document.getElementById('tp-user-name').innerText = "Olá, " + (perfil.nome || "Trader");
-    
-    // Avatar
-    let inicias = "TP";
-    if(perfil.nome && perfil.nome.length >= 2) inicias = perfil.nome.substring(0,2).toUpperCase();
+    let inicias = "TP"; if(perfil.nome && perfil.nome.length >= 2) inicias = perfil.nome.substring(0,2).toUpperCase();
     document.getElementById('avatar-initials').innerText = inicias;
-
-    // Score
     document.getElementById('dash-score').innerText = perfil.score || 0;
-    
+
     let nivel = 'Iniciante';
     const s = perfil.score || 0;
     if(s > 100) nivel = 'Intermediário';
@@ -173,7 +133,7 @@ async function carregarTudo() {
     badge.innerText = nivel;
     badge.className = 'badge-level ' + (nivel === 'Iniciante' ? 'bronze' : (nivel === 'Intermediário' ? 'silver' : (nivel === 'Trader PRO' ? 'gold' : 'diamond')));
 
-    // Histórico
+    // Operações
     const { data: ops } = await sb.from('trader_diario').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false});
     window.userOperations = ops || [];
     
@@ -191,18 +151,22 @@ function atualizarResumo() {
     });
 
     const elSaldo = document.getElementById('dash-today-result');
-    elSaldo.innerText = "R$ " + saldo.toFixed(2);
+    // FORMATAÇÃO AUTOMÁTICA BRL AQUI
+    elSaldo.innerText = saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     elSaldo.style.color = saldo >= 0 ? '#2ecc71' : '#e74c3c';
 
     const tbody = document.getElementById('home-recent-list');
     tbody.innerHTML = '';
     window.userOperations.slice(0, 5).forEach(op => {
         const color = op.resultado === 'GAIN' ? '#2ecc71' : (op.resultado === 'LOSS' ? '#e74c3c' : '#fff');
+        // FORMATAÇÃO AUTOMÁTICA BRL NA TABELA
+        const valorFormatado = Number(op.pontos).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
         tbody.innerHTML += `<tr>
             <td>${new Date(op.created_at).toLocaleDateString()}</td>
             <td>${op.ativo}</td>
             <td style="color:${color}; font-weight:bold;">${op.resultado}</td>
-            <td>R$ ${Number(op.pontos).toFixed(2)}</td>
+            <td>${valorFormatado}</td>
         </tr>`;
     });
     
@@ -217,85 +181,70 @@ window.setCurrency = function(curr) {
     document.getElementById('toggle-brl').className = curr === 'BRL' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('toggle-pts').className = curr === 'PTS' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('lbl-value').innerText = curr === 'BRL' ? 'Valor Financeiro (R$)' : 'Quantidade de Pontos';
+    
+    // Limpa o input ao trocar para evitar bugs de formatação
+    document.getElementById('op-value').value = '';
 }
 
-// Atualize esta função para mostrar a mensagem certa
 window.selectType = function(type) {
     currentOpType = type;
     document.querySelectorAll('.res-btn').forEach(b => b.classList.remove('active'));
-    
     if(type === 'GAIN') document.getElementById('btn-gain').classList.add('active');
     if(type === 'LOSS') document.getElementById('btn-loss').classList.add('active');
     if(type === '0x0') document.getElementById('btn-zero').classList.add('active');
 
     const feed = document.getElementById('score-feedback');
-    
-    // NOVOS TEXTOS DE FEEDBACK
-    if(type === 'GAIN') feed.innerText = "GAIN: +10 pts + 1% do valor financeiro!";
-    if(type === 'LOSS') feed.innerText = "LOSS: -10 pts (Penalidade de desempenho).";
-    if(type === '0x0') feed.innerText = "0x0: +1 pt (Proteção de capital).";
-    
-    // Muda a cor do texto dependendo do tipo
+    if(type === 'GAIN') feed.innerText = "GAIN: +10 pts + 1% do valor!";
+    if(type === 'LOSS') feed.innerText = "LOSS: -10 pts (Penalidade).";
+    if(type === '0x0') feed.innerText = "0x0: +1 pt.";
     feed.style.color = type === 'LOSS' ? '#e74c3c' : (type === 'GAIN' ? '#2ecc71' : 'var(--brand)');
 }
 
-// Atualize esta função para calcular a perda
 window.salvarOperacao = async function() {
     const asset = document.getElementById('op-asset').value;
-    let val = document.getElementById('op-value').value;
+    const rawValue = document.getElementById('op-value').value;
     
-    if(!currentOpType || !val) return alert("Por favor, selecione GAIN/LOSS e digite o valor.");
+    if(!currentOpType || !rawValue) return alert("Preencha Resultado e Valor.");
     
     const btn = event.target;
-    btn.innerText = "Processando...";
+    btn.innerText = "Salvando...";
     btn.disabled = true;
+
+    // --- CONVERSÃO DE VALOR (O PULO DO GATO) ---
+    // Transforma "R$ 1.500,50" em 1500.50 para o banco
+    let valParaSalvar = 0;
+    
+    if (currentCurrency === 'BRL') {
+        // Remove tudo que não é digito, divide por 100
+        valParaSalvar = Number(rawValue.replace(/\D/g, "")) / 100;
+    } else {
+        // Se for pontos, usa direto
+        valParaSalvar = Number(rawValue);
+    }
 
     try {
         await sb.from('trader_diario').insert([{
             user_id: currentUser.id,
             ativo: asset + (currentCurrency === 'PTS' ? ' (Pts)' : ''),
             resultado: currentOpType,
-            pontos: val
+            pontos: valParaSalvar // Salva número limpo
         }]);
 
-        // NOVA LÓGICA DE PONTUAÇÃO
         let ptsChange = 0;
-        
-        if(currentOpType === 'GAIN') {
-            // Ganha 10 fixo + 1% do valor financeiro (arredondado pra baixo)
-            ptsChange = 10 + Math.floor(Number(val) * 0.01);
-        } else if(currentOpType === 'LOSS') {
-            // Perde 10 pontos fixos
-            ptsChange = -10; 
-        } else if(currentOpType === '0x0') {
-            // Ganha 1 ponto
-            ptsChange = 1;
-        }
+        if(currentOpType === 'GAIN') ptsChange = 10 + Math.floor(valParaSalvar * 0.01);
+        if(currentOpType === 'LOSS') ptsChange = -10;
+        if(currentOpType === '0x0') ptsChange = 1;
 
-        // Pega o score atual e soma (ou subtrai se for negativo)
-        let scoreAtual = parseInt(document.getElementById('dash-score').innerText || 0);
-        let novoScore = scoreAtual + ptsChange;
-        
-        // Evita score negativo (opcional, se quiser permitir negativo, tire essa linha)
-        // if (novoScore < 0) novoScore = 0; 
-
+        let novoScore = parseInt(document.getElementById('dash-score').innerText || 0) + ptsChange;
         await sb.from('trader_perfil').update({ score: novoScore }).eq('user_id', currentUser.id);
 
-        // Mensagem dinâmica
-        let msg = ptsChange > 0 ? `+${ptsChange} pontos!` : `${ptsChange} pontos.`;
-        alert(`Trade Registrado! \nAlteração no Score: ${msg}`);
-        
+        alert(`Trade Registrado! Alteração no Score: ${ptsChange > 0 ? '+' : ''}${ptsChange} pts.`);
         document.getElementById('op-value').value = '';
         await carregarTudo();
         setTab('home');
 
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao salvar.");
-    } finally {
-        btn.innerText = "SALVAR NO DIÁRIO";
-        btn.disabled = false;
-    }
+    } catch (e) { console.error(e); alert("Erro ao salvar."); } 
+    finally { btn.innerText = "SALVAR NO DIÁRIO"; btn.disabled = false; }
 }
 
 // --- CHECKLIST ---
@@ -325,9 +274,7 @@ async function verificarChecklistDia() {
 window.salvarChecklist = async function() {
     const hoje = new Date().toISOString().split('T')[0];
     let novoScore = parseInt(document.getElementById('dash-score').innerText || 0) + 10;
-    
     const { error } = await sb.from('trader_perfil').update({ score: novoScore, ultimo_checklist: hoje }).eq('user_id', currentUser.id);
-
     if(!error) {
         alert("Checklist Salvo! +10 Pontos.");
         verificarChecklistDia();
@@ -335,10 +282,10 @@ window.salvarChecklist = async function() {
     }
 }
 
-// --- NÍVEIS E GRÁFICOS ---
 window.openLevelsModal = function() { document.getElementById('modal-levels').style.display = 'flex'; }
 window.closeLevelsModal = function() { document.getElementById('modal-levels').style.display = 'none'; }
 
+// --- GRÁFICOS ---
 window.renderChart = function() {
     const ctx = document.getElementById('chart-equity');
     if(!ctx) return;
@@ -372,7 +319,7 @@ window.renderChart = function() {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { grid: { color: '#2d3436' }, ticks: { color: '#c5c6c7' } },
+                y: { grid: { color: '#2d3436' }, ticks: { color: '#c5c6c7', callback: v => 'R$ ' + v } },
                 x: { display: false }
             },
             plugins: { legend: { display: false } }
