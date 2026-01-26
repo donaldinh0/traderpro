@@ -219,6 +219,7 @@ window.setCurrency = function(curr) {
     document.getElementById('lbl-value').innerText = curr === 'BRL' ? 'Valor Financeiro (R$)' : 'Quantidade de Pontos';
 }
 
+// Atualize esta função para mostrar a mensagem certa
 window.selectType = function(type) {
     currentOpType = type;
     document.querySelectorAll('.res-btn').forEach(b => b.classList.remove('active'));
@@ -228,19 +229,25 @@ window.selectType = function(type) {
     if(type === '0x0') document.getElementById('btn-zero').classList.add('active');
 
     const feed = document.getElementById('score-feedback');
-    if(type === 'GAIN') feed.innerText = "GAIN: +10 pts + 1% do valor!";
-    if(type === 'LOSS') feed.innerText = "LOSS: +2 pts (Disciplina).";
-    if(type === '0x0') feed.innerText = "0x0: +1 pt.";
+    
+    // NOVOS TEXTOS DE FEEDBACK
+    if(type === 'GAIN') feed.innerText = "GAIN: +10 pts + 1% do valor financeiro!";
+    if(type === 'LOSS') feed.innerText = "LOSS: -10 pts (Penalidade de desempenho).";
+    if(type === '0x0') feed.innerText = "0x0: +1 pt (Proteção de capital).";
+    
+    // Muda a cor do texto dependendo do tipo
+    feed.style.color = type === 'LOSS' ? '#e74c3c' : (type === 'GAIN' ? '#2ecc71' : 'var(--brand)');
 }
 
+// Atualize esta função para calcular a perda
 window.salvarOperacao = async function() {
     const asset = document.getElementById('op-asset').value;
     let val = document.getElementById('op-value').value;
     
-    if(!currentOpType || !val) return alert("Preencha Resultado e Valor.");
+    if(!currentOpType || !val) return alert("Por favor, selecione GAIN/LOSS e digite o valor.");
     
     const btn = event.target;
-    btn.innerText = "Salvando...";
+    btn.innerText = "Processando...";
     btn.disabled = true;
 
     try {
@@ -251,15 +258,33 @@ window.salvarOperacao = async function() {
             pontos: val
         }]);
 
-        let ptsGain = 0;
-        if(currentOpType === 'GAIN') ptsGain = 10 + Math.floor(Number(val) * 0.01);
-        if(currentOpType === 'LOSS') ptsGain = 2;
-        if(currentOpType === '0x0') ptsGain = 1;
+        // NOVA LÓGICA DE PONTUAÇÃO
+        let ptsChange = 0;
+        
+        if(currentOpType === 'GAIN') {
+            // Ganha 10 fixo + 1% do valor financeiro (arredondado pra baixo)
+            ptsChange = 10 + Math.floor(Number(val) * 0.01);
+        } else if(currentOpType === 'LOSS') {
+            // Perde 10 pontos fixos
+            ptsChange = -10; 
+        } else if(currentOpType === '0x0') {
+            // Ganha 1 ponto
+            ptsChange = 1;
+        }
 
-        let novoScore = parseInt(document.getElementById('dash-score').innerText || 0) + ptsGain;
+        // Pega o score atual e soma (ou subtrai se for negativo)
+        let scoreAtual = parseInt(document.getElementById('dash-score').innerText || 0);
+        let novoScore = scoreAtual + ptsChange;
+        
+        // Evita score negativo (opcional, se quiser permitir negativo, tire essa linha)
+        // if (novoScore < 0) novoScore = 0; 
+
         await sb.from('trader_perfil').update({ score: novoScore }).eq('user_id', currentUser.id);
 
-        alert(`Trade Registrado! +${ptsGain} pts.`);
+        // Mensagem dinâmica
+        let msg = ptsChange > 0 ? `+${ptsChange} pontos!` : `${ptsChange} pontos.`;
+        alert(`Trade Registrado! \nAlteração no Score: ${msg}`);
+        
         document.getElementById('op-value').value = '';
         await carregarTudo();
         setTab('home');

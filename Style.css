@@ -71,9 +71,15 @@ body {
     font-weight: 800;
 }
 .user-info h3 { margin: 0; font-size: 1rem; }
+/* Substitua a classe .badge-level antiga por esta: */
 .badge-level {
-    font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 2px 8px;
-    border-radius: 12px; color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 12px;
+    color: #000000; /* AGORA É PRETO */
+    font-weight: 800; /* Negrito extra para ler melhor */
+    text-transform: uppercase;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2); /* Sombra leve para destacar */
 }
 .btn-logout { background: none; border: none; color: var(--loss); font-size: 1.5rem; cursor: pointer; }
 
