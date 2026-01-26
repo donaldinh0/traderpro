@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trader PRO | Alta Performance</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="login-card">
+            <div class="logo-area">
+                <h1>Trader PRO <span style="color:var(--brand)">.</span></h1>
+                <p>Gestão Profissional de Performance</p>
+            </div>
+
+            <div id="form-login" class="auth-form">
+                <div class="input-group">
+                    <i class="ri-mail-line"></i>
+                    <input type="email" id="email" placeholder="E-mail corporativo">
+                </div>
+                <div class="input-group">
+                    <i class="ri-lock-line"></i>
+                    <input type="password" id="password" placeholder="Sua senha">
+                </div>
+                <button onclick="login()" class="btn-primary">ACESSAR PLATAFORMA</button>
+                <p class="toggle-link" onclick="toggleAuth('register')">Não tem acesso? <span>Criar conta</span></p>
+            </div>
+
+            <div id="form-register" class="auth-form" style="display: none;">
+                <div class="input-group">
+                    <i class="ri-user-line"></i>
+                    <input type="text" id="reg-name" placeholder="Nome Completo">
+                </div>
+                <div class="input-group">
+                    <i class="ri-phone-line"></i>
+                    <input type="tel" id="reg-phone" placeholder="WhatsApp / Telefone">
+                </div>
+                <div class="input-group">
+                    <i class="ri-mail-line"></i>
+                    <input type="email" id="reg-email" placeholder="Seu melhor e-mail">
+                </div>
+                <div class="input-group">
+                    <i class="ri-lock-line"></i>
+                    <input type="password" id="reg-password" placeholder="Senha (mín 6 dig)">
+                </div>
+                <button onclick="cadastro()" class="btn-primary">CRIAR CONTA</button>
+                <p class="toggle-link" onclick="toggleAuth('login')">Já sou membro. <span>Fazer Login</span></p>
+            </div>
+            
+            <div id="msg-auth" class="msg-error"></div>
+        </div>
+    </div>
+
+    <div id="app-screen" style="display: none;">
+        
+        <header class="app-header">
+            <div class="user-profile">
+                <div class="avatar-circle" id="avatar-initials">TP</div>
+                <div class="user-info">
+                    <h3 id="tp-user-name">Carregando...</h3>
+                    <span id="tp-user-level" class="badge-level">Iniciante</span>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="logout()"><i class="ri-logout-box-r-line"></i></button>
+        </header>
+
+        <nav class="nav-pills">
+            <button class="pill active" onclick="setTab('home')"><i class="ri-dashboard-line"></i> Visão Geral</button>
+            <button class="pill" onclick="setTab('operations')"><i class="ri-add-circle-line"></i> Registrar</button>
+            <button class="pill" onclick="setTab('checklist')"><i class="ri-checkbox-circle-line"></i> Checklist</button>
+            <button class="pill" onclick="setTab('analytics')"><i class="ri-bar-chart-line"></i> Performance</button>
+            <button class="pill" onclick="openLevelsModal()"><i class="ri-trophy-line"></i> Níveis</button>
+        </nav>
+
+        <main class="content-area">
+            
+            <section id="tab-home" class="panel active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <small>Resultado Hoje</small>
+                        <h2 id="dash-today-result">R$ 0,00</h2>
+                    </div>
+                    <div class="stat-card">
+                        <small>Score Atual</small>
+                        <h2 id="dash-score" style="color:var(--brand)">0</h2>
+                    </div>
+                    <div class="stat-card">
+                        <small>Taxa de Acerto</small>
+                        <h2 id="dash-winrate">0%</h2>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h4><i class="ri-history-line"></i> Últimas Operações</h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="table-clean">
+                        <thead><tr><th>Data</th><th>Ativo</th><th>Res</th><th>Valor</th></tr></thead>
+                        <tbody id="home-recent-list"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="tab-operations" class="panel" hidden>
+                <div class="form-card">
+                    <h3>Registrar Trade</h3>
+                    
+                    <label>Ativo Operado</label>
+                    <select id="op-asset" class="input-field">
+                        <option value="WIN">WIN (Mini Índice)</option>
+                        <option value="WDO">WDO (Mini Dólar)</option>
+                        <option value="ACAO">Ações / B3</option>
+                        <option value="FOREX">Forex / Internacional</option>
+                        <option value="CRYPTO">Criptomoedas</option>
+                    </select>
+
+                    <label>Tipo de Registro</label>
+                    <div class="toggle-switch">
+                        <button class="toggle-btn active" id="toggle-brl" onclick="setCurrency('BRL')">R$ (Reais)</button>
+                        <button class="toggle-btn" id="toggle-pts" onclick="setCurrency('PTS')">Pontos / Dólar</button>
+                    </div>
+
+                    <label>Resultado da Operação</label>
+                    <div class="result-buttons">
+                        <button class="res-btn gain" id="btn-gain" onclick="selectType('GAIN')">GAIN</button>
+                        <button class="res-btn loss" id="btn-loss" onclick="selectType('LOSS')">LOSS</button>
+                        <button class="res-btn zero" id="btn-zero" onclick="selectType('0x0')">0x0</button>
+                    </div>
+
+                    <label id="lbl-value">Valor Financeiro (R$)</label>
+                    <input type="number" id="op-value" class="input-field" placeholder="0.00">
+
+                    <div class="score-preview">
+                        <i class="ri-information-line"></i>
+                        <span id="score-feedback">Selecione o resultado para ver a pontuação.</span>
+                    </div>
+
+                    <button class="btn-primary full" onclick="salvarOperacao()">SALVAR NO DIÁRIO</button>
+                </div>
+            </section>
+
+            <section id="tab-checklist" class="panel" hidden>
+                <div class="checklist-header">
+                    <h3>Checklist Diário</h3>
+                    <span class="tag-today" id="chk-date">Hoje</span>
+                </div>
+                
+                <div id="check-alert" class="alert-box" style="display:none;"></div>
+
+                <div class="check-list-group">
+                    <h4>Pré-Market</h4>
+                    <label class="check-item"><input type="checkbox" class="chk-input"> <span>Estou descansado e focado?</span></label>
+                    <label class="check-item"><input type="checkbox" class="chk-input"> <span>Analisei o calendário econômico?</span></label>
+                    <label class="check-item"><input type="checkbox" class="chk-input"> <span>Defini meu Stop Loss diário?</span></label>
+                </div>
+                <div class="check-list-group">
+                    <h4>Pós-Operação</h4>
+                    <label class="check-item"><input type="checkbox" class="chk-input"> <span>Preenchi o diário corretamente?</span></label>
+                    <label class="check-item"><input type="checkbox" class="chk-input"> <span>Respeitei meu gerenciamento?</span></label>
+                </div>
+
+                <button id="btn-save-check" class="btn-primary full" onclick="salvarChecklist()">CONCLUIR CHECKLIST (+10 PTS)</button>
+            </section>
+
+            <section id="tab-analytics" class="panel" hidden>
+                <h3>Evolução Patrimonial</h3>
+                <div class="chart-container">
+                    <canvas id="chart-equity"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-levels" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🏆 Tabela de Níveis</h3>
+                <button onclick="closeLevelsModal()"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="levels-table-wrap">
+                <table class="levels-table">
+                    <thead><tr><th>Nível</th><th>Score Necessário</th><th>Status</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="lvl-tag bronze">Iniciante</span></td><td>0 - 100 pts</td><td>🟢</td></tr>
+                        <tr><td><span class="lvl-tag silver">Intermediário</span></td><td>101 - 500 pts</td><td>⚪</td></tr>
+                        <tr><td><span class="lvl-tag gold">Trader PRO</span></td><td>501 - 2000 pts</td><td>🟡</td></tr>
+                        <tr><td><span class="lvl-tag diamond">Lenda</span></td><td>2000+ pts</td><td>🔵</td></tr>
+                    </tbody>
+                </table>
+                <div class="rules-box">
+                    <h4>Regras de Pontuação:</h4>
+                    <p><i class="ri-arrow-up-circle-fill" style="color:var(--gain)"></i> <b>GAIN:</b> +10 pts + (1% do valor financeiro)</p>
+                    <p><i class="ri-arrow-down-circle-fill" style="color:var(--loss)"></i> <b>LOSS:</b> +2 pts (Prêmio de disciplina)</p>
+                    <p><i class="ri-checkbox-circle-fill" style="color:var(--brand)"></i> <b>Checklist:</b> +10 pts (Máx 1x por dia)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
