@@ -169,22 +169,22 @@
         </p>
 
         <label>Tamanho da Banca (R$)</label>
-        <div class="input-group">
-            <i class="ri-wallet-3-line"></i>
-            <input type="number" id="calc-bank" class="input-field" placeholder="Ex: 10000">
-        </div>
+            <div class="input-group">
+                <i class="ri-wallet-3-line"></i>
+                <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+            </div>
 
-        <label>Risco Aceitável por Trade (%)</label>
-        <div class="input-group">
-            <i class="ri-percent-line"></i>
-            <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 1 ou 0.5">
-        </div>
+            <label>Risco Aceitável por Trade (%)</label>
+            <div class="input-group">
+                <i class="ri-percent-line"></i>
+                <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 1">
+            </div>
 
-        <label>Tamanho do Stop Loss (Pontos)</label>
-        <div class="input-group">
-            <i class="ri-ruler-line"></i>
-            <input type="number" id="calc-stop" class="input-field" placeholder="Ex: 150 (WIN) ou 5 (WDO)">
-        </div>
+            <label>Tamanho do Stop Loss (Pontos)</label>
+            <div class="input-group">
+                <i class="ri-ruler-line"></i>
+                <input type="text" id="calc-stop" class="input-field" placeholder="0 pts" inputmode="numeric">
+            </div>
 
         <button class="btn-primary full" onclick="calcularPositionSize()">CALCULAR LOTES</button>
 

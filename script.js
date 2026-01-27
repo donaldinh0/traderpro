@@ -361,40 +361,69 @@ window.renderChart = function() {
     window.myChart = new Chart(ctx, {type:'line',data:{labels:lbl,datasets:[{label:'R$',data:dat,borderColor:'#66fcf1',backgroundColor:'rgba(102, 252, 241, 0.1)',fill:true}]},options:{responsive:true,scales:{y:{grid:{color:'#2d3436'}},x:{display:false}},plugins:{legend:{display:false}}}});
 }
 
-// --- CALCULADORA DE RISCO ---
-window.calcularPositionSize = function() {
-    // 1. Pega os valores
-    const bank = Number(document.getElementById('calc-bank').value);
-    const riskPercent = Number(document.getElementById('calc-risk').value);
-    const stopPoints = Number(document.getElementById('calc-stop').value);
+// --- LÓGICA DE FORMATAÇÃO DA CALCULADORA ---
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // 1. Formata a Banca em Reais (R$)
+    const inputBank = document.getElementById('calc-bank');
+    if(inputBank) {
+        inputBank.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ""); // Remove letras
+            let number = Number(value) / 100; // Centavos
+            e.target.value = number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        });
+    }
 
-    // 2. Validação
+    // 2. Formata o Stop em Pontos (pts)
+    const inputStop = document.getElementById('calc-stop');
+    if(inputStop) {
+        inputStop.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ""); // Remove tudo que não é número
+            
+            if (value === "") {
+                e.target.value = "";
+            } else {
+                e.target.value = value + " pts";
+            }
+        });
+    }
+});
+
+// --- FUNÇÃO DE CALCULAR (ATUALIZADA) ---
+window.calcularPositionSize = function() {
+    // Pegamos os valores brutos (Ex: "R$ 1.000,00" e "150 pts")
+    const rawBank = document.getElementById('calc-bank').value;
+    const rawStop = document.getElementById('calc-stop').value;
+    const riskPercent = Number(document.getElementById('calc-risk').value);
+
+    // LIMPEZA DOS DADOS PARA MATEMÁTICA
+    // Banca: Remove tudo que não é número, divide por 100 (centavos)
+    const bank = Number(rawBank.replace(/\D/g, "")) / 100;
+    
+    // Stop: Remove o " pts" e pega só o número
+    const stopPoints = Number(rawStop.replace(/\D/g, ""));
+
+    // Validação
     if (!bank || !riskPercent || !stopPoints) {
-        alert("Por favor, preencha todos os campos (Banca, Risco e Stop).");
+        alert("Preencha todos os campos corretamente.");
         return;
     }
 
-    // 3. Cálculos
-    // Risco Financeiro = Banca * (Porcentagem / 100)
+    // Cálculos
     const riskValue = bank * (riskPercent / 100);
-    
-    // Valor por Ponto Necessário = Risco Financeiro / Pontos do Stop
     const valuePerPoint = riskValue / stopPoints;
 
-    // Contratos
-    // WIN: Cada contrato vale R$ 0,20 por ponto
-    const contractsWIN = Math.floor(valuePerPoint / 0.20);
-    
-    // WDO: Cada contrato vale R$ 10,00 por ponto
-    const contractsWDO = Math.floor(valuePerPoint / 10.00);
+    // Contratos (Arredondar para baixo)
+    const contractsWIN = Math.floor(valuePerPoint / 0.20); // Índice
+    const contractsWDO = Math.floor(valuePerPoint / 10.00); // Dólar
 
-    // 4. Exibir Resultados
+    // Exibir Resultados
     document.getElementById('res-risk-value').innerText = riskValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     document.getElementById('res-per-point').innerText = valuePerPoint.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
     document.getElementById('res-contracts-win').innerText = contractsWIN + " contratos";
     document.getElementById('res-contracts-wdo').innerText = contractsWDO + " contratos";
 
-    // Mostra a caixa de resultado
+    // Mostrar caixa
     document.getElementById('calc-result-box').style.display = 'block';
 }
