@@ -55,6 +55,7 @@
             <button class="pill" onclick="setTab('checklist')"><i class="ri-checkbox-circle-line"></i> Checklist</button>
             <button class="pill" onclick="setTab('analytics')"><i class="ri-bar-chart-line"></i> Performance</button>
             <button class="pill" onclick="openLevelsModal()"><i class="ri-trophy-line"></i> Níveis</button>
+            <button class="pill" onclick="setTab('calculator')"><i class="ri-calculator-line"></i> Calculadora</button>
         </nav>
 
         <main class="content-area">
@@ -159,6 +160,60 @@
                     <button id="btn-pos" class="btn-primary full" onclick="salvarChecklist('POS')">CONCLUIR PÓS (+5 PTS)</button>
                 </div>
             </section>
+
+            <section id="tab-calculator" class="panel" hidden>
+    <div class="form-card">
+        <h3>🧮 Calculadora de Risco</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">
+            Defina o tamanho da sua posição com base no seu stop.
+        </p>
+
+        <label>Tamanho da Banca (R$)</label>
+        <div class="input-group">
+            <i class="ri-wallet-3-line"></i>
+            <input type="number" id="calc-bank" class="input-field" placeholder="Ex: 10000">
+        </div>
+
+        <label>Risco Aceitável por Trade (%)</label>
+        <div class="input-group">
+            <i class="ri-percent-line"></i>
+            <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 1 ou 0.5">
+        </div>
+
+        <label>Tamanho do Stop Loss (Pontos)</label>
+        <div class="input-group">
+            <i class="ri-ruler-line"></i>
+            <input type="number" id="calc-stop" class="input-field" placeholder="Ex: 150 (WIN) ou 5 (WDO)">
+        </div>
+
+        <button class="btn-primary full" onclick="calcularPositionSize()">CALCULAR LOTES</button>
+
+        <div id="calc-result-box" style="display:none; margin-top:30px; border-top:1px solid var(--border); padding-top:20px;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <small>Risco Máximo (R$)</small>
+                    <h2 id="res-risk-value" style="color:var(--loss)">R$ 0,00</h2>
+                </div>
+                <div class="stat-card">
+                    <small>Valor por Ponto</small>
+                    <h2 id="res-per-point">R$ 0,00</h2>
+                </div>
+            </div>
+
+            <div style="background: var(--bg-dark); padding: 15px; border-radius: 12px; margin-top: 15px;">
+                <h4 style="margin:0 0 10px 0; color:var(--brand)">Sugestão de Contratos:</h4>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span>WIN (Índice):</span>
+                    <strong id="res-contracts-win" style="color:#fff">0</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>WDO (Dólar):</span>
+                    <strong id="res-contracts-wdo" style="color:#fff">0</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
             <section id="tab-analytics" class="panel" hidden>
                 <h3>Curva de Patrimônio</h3>

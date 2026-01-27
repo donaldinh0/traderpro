@@ -360,3 +360,41 @@ window.renderChart = function() {
     if(window.myChart instanceof Chart) window.myChart.destroy();
     window.myChart = new Chart(ctx, {type:'line',data:{labels:lbl,datasets:[{label:'R$',data:dat,borderColor:'#66fcf1',backgroundColor:'rgba(102, 252, 241, 0.1)',fill:true}]},options:{responsive:true,scales:{y:{grid:{color:'#2d3436'}},x:{display:false}},plugins:{legend:{display:false}}}});
 }
+
+// --- CALCULADORA DE RISCO ---
+window.calcularPositionSize = function() {
+    // 1. Pega os valores
+    const bank = Number(document.getElementById('calc-bank').value);
+    const riskPercent = Number(document.getElementById('calc-risk').value);
+    const stopPoints = Number(document.getElementById('calc-stop').value);
+
+    // 2. Validação
+    if (!bank || !riskPercent || !stopPoints) {
+        alert("Por favor, preencha todos os campos (Banca, Risco e Stop).");
+        return;
+    }
+
+    // 3. Cálculos
+    // Risco Financeiro = Banca * (Porcentagem / 100)
+    const riskValue = bank * (riskPercent / 100);
+    
+    // Valor por Ponto Necessário = Risco Financeiro / Pontos do Stop
+    const valuePerPoint = riskValue / stopPoints;
+
+    // Contratos
+    // WIN: Cada contrato vale R$ 0,20 por ponto
+    const contractsWIN = Math.floor(valuePerPoint / 0.20);
+    
+    // WDO: Cada contrato vale R$ 10,00 por ponto
+    const contractsWDO = Math.floor(valuePerPoint / 10.00);
+
+    // 4. Exibir Resultados
+    document.getElementById('res-risk-value').innerText = riskValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    document.getElementById('res-per-point').innerText = valuePerPoint.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    
+    document.getElementById('res-contracts-win').innerText = contractsWIN + " contratos";
+    document.getElementById('res-contracts-wdo').innerText = contractsWDO + " contratos";
+
+    // Mostra a caixa de resultado
+    document.getElementById('calc-result-box').style.display = 'block';
+}
