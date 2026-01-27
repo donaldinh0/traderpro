@@ -153,3 +153,44 @@ body {
 .bronze { background: #cd7f32; } .silver { background: #e0e0e0; } .gold { background: #ffd700; } .diamond { background: #00cec9; }
 .rules-box { background: #0b0c10; padding: 15px; border-radius: 10px; margin-top: 20px; font-size: 0.9rem; color: var(--text-muted); }
 .rules-box p { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+
+/* HISTÓRICO DIÁRIO */
+.history-day-card {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border);
+}
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 8px;
+}
+.day-date { font-weight: bold; color: var(--text-main); }
+.day-result { font-weight: bold; font-size: 1.1rem; }
+
+.day-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.day-pts { color: var(--brand); font-weight: 600; }
+
+/* CHECKLIST DUPLO */
+.check-box-container {
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+.checklist-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+}
+.checklist-header h4 { margin: 0; color: var(--brand); }
+.status-badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; }
+.status-badge.pending { background: #333; color: #aaa; }
+.status-badge.success { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
