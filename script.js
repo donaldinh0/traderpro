@@ -62,22 +62,58 @@ async function login() {
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) { if(msg) msg.innerText = error.message; } else { location.reload(); }
 }
+// --- CADASTRO COM 30 DIAS GRÁTIS ---
 async function cadastro() {
     const nome = document.getElementById('reg-name').value;
     const phone = document.getElementById('reg-phone').value;
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
     const msg = document.getElementById('msg-auth');
-    if(!nome || !email || !password) return msg.innerText = "Preencha tudo.";
+
+    if(!nome || !email || !password) return msg.innerText = "Preencha todos os campos.";
     
-    msg.innerText = "Criando...";
-    const { data, error } = await sb.auth.signUp({ email, password });
-    if (error) { msg.innerText = error.message; return; }
-    if (data.user) {
-        try {
-            await sb.from('trader_perfil').insert([{ user_id: data.user.id, nome: nome, telefone: phone, score: 0, nivel: 'Iniciante' }]);
-            alert("Sucesso! Faça Login."); toggleAuth('login');
-        } catch (err) { alert("Erro ao salvar perfil, mas conta criada."); toggleAuth('login'); }
+    msg.innerText = "Criando sua conta grátis...";
+
+    try {
+        // 1. Cria o Login
+        const { data, error } = await sb.auth.signUp({ email, password });
+
+        if (error) {
+            msg.innerText = "Erro: " + error.message;
+            return;
+        }
+
+        if (data.user) {
+            // 2. Verifica se JÁ PAGOU (Caso alguém compre antes de cadastrar)
+            const { data: compra } = await sb.from('compras_lastlink').select('*').eq('email', email).single();
+            
+            let statusInicial = 'teste_gratis'; // Padrão é Trial
+            if (compra) statusInicial = 'ativo'; // Se já pagou, vira Ativo direto
+
+            // 3. Calcula data de expiração (Hoje + 30 dias)
+            const dataHoje = new Date();
+            dataHoje.setDate(dataHoje.getDate() + 30); // Soma 30 dias
+            const dataFimTrial = dataHoje.toISOString();
+
+            // 4. Salva no Banco
+            await sb.from('trader_perfil').insert([{ 
+                user_id: data.user.id, 
+                nome: nome,
+                telefone: phone,
+                email: email,
+                score: 0, 
+                nivel: 'Iniciante',
+                status_assinatura: statusInicial,
+                fim_trial: dataFimTrial // <--- Salva a data limite
+            }]);
+
+            alert("Conta Criada! Você tem 30 dias de acesso gratuito.");
+            toggleAuth('login');
+        }
+
+    } catch (err) {
+        console.error(err);
+        msg.innerText = "Erro ao criar conta.";
     }
 }
 async function logout() { await sb.auth.signOut(); location.reload(); }
@@ -97,15 +133,70 @@ window.setTab = function(tabName) {
     if(tabName === 'history') renderHistory();
 }
 
+// --- DADOS E CATRACA DE SEGURANÇA ---
 async function carregarTudo() {
     if(!currentUser) return;
-    let { data: perfil } = await sb.from('trader_perfil').select('*').eq('user_id', currentUser.id).single();
-    if (!perfil) {
-        const nomeProv = currentUser.email.split('@')[0];
-        const { data: novo } = await sb.from('trader_perfil').insert([{ user_id: currentUser.id, nome: nomeProv, score: 0 }]).select().single();
-        perfil = novo || { nome: nomeProv, score: 0, nivel: 'Iniciante' };
+
+    // Busca Perfil
+    let { data: perfil, error } = await sb.from('trader_perfil').select('*').eq('user_id', currentUser.id).single();
+
+    // Fallback de criação (Se der erro)
+    if (!perfil || error) {
+        // ... (código de fallback igual ao anterior) ...
     }
 
+    // --- CATRACA INTELIGENTE (TRIAL 30 DIAS) ---
+    const hoje = new Date();
+    const dataFim = perfil.fim_trial ? new Date(perfil.fim_trial) : new Date(); // Pega data do banco
+    
+    let acessoLiberado = false;
+    let diasRestantes = 0;
+
+    if (perfil.status_assinatura === 'ativo') {
+        // Se pagou, entra sempre
+        acessoLiberado = true;
+    } else {
+        // Se não pagou, verifica o prazo
+        if (hoje < dataFim) {
+            acessoLiberado = true;
+            // Calcula dias restantes para mostrar aviso
+            const diferencaTempo = dataFim - hoje;
+            diasRestantes = Math.ceil(diferencaTempo / (1000 * 60 * 60 * 24));
+        } else {
+            acessoLiberado = false; // Prazo acabou
+        }
+    }
+
+    // TELA DE BLOQUEIO (Se acesso não for liberado)
+    if (!acessoLiberado) {
+        document.getElementById('app-screen').innerHTML = `
+            <div style="text-align:center; padding:50px; color:#fff;">
+                <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-timer-flash-line"></i></h1>
+                <h2>Seus 30 dias grátis acabaram!</h2>
+                <p>Espero que tenha gostado do Trader PRO. Para continuar evoluindo, assine agora.</p>
+                <br>
+                <a href="SEU_LINK_LASTLINK_AQUI" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">
+                    ASSINAR AGORA
+                </a>
+                <br><br>
+                <button onclick="logout()" style="background:none; border:none; color:#aaa; cursor:pointer;">Sair</button>
+            </div>
+        `;
+        return; // Para tudo
+    }
+
+    // --- FIM DA CATRACA ---
+
+    // AVISO DE DIAS RESTANTES (Opcional: Mostra no topo se for trial)
+    if (perfil.status_assinatura !== 'ativo' && diasRestantes <= 30) {
+        // Adiciona um aviso visual discreto
+        const aviso = document.createElement('div');
+        aviso.style = "background:#e67e22; color:#fff; text-align:center; padding:5px; font-size:0.8rem; font-weight:bold;";
+        aviso.innerText = `🔥 Período de Teste: Restam ${diasRestantes} dias.`;
+        document.body.prepend(aviso);
+    }
+
+    // Se passou da catraca, carrega o resto normal...
     document.getElementById('tp-user-name').innerText = "Olá, " + (perfil.nome || "Trader");
     let inicias = "TP"; if(perfil.nome && perfil.nome.length>=2) inicias = perfil.nome.substring(0,2).toUpperCase();
     document.getElementById('avatar-initials').innerText = inicias;
@@ -121,6 +212,21 @@ async function carregarTudo() {
     
     atualizarResumo();
 }
+
+    document.getElementById('tp-user-name').innerText = "Olá, " + (perfil.nome || "Trader");
+    let inicias = "TP"; if(perfil.nome && perfil.nome.length>=2) inicias = perfil.nome.substring(0,2).toUpperCase();
+    document.getElementById('avatar-initials').innerText = inicias;
+    document.getElementById('dash-score').innerText = perfil.score || 0;
+
+    let nivel = 'Iniciante'; const s = perfil.score || 0;
+    if(s > 100) nivel = 'Intermediário'; if(s > 500) nivel = 'Trader PRO'; if(s > 2000) nivel = 'Lenda';
+    const badge = document.getElementById('tp-user-level'); badge.innerText = nivel;
+    badge.className = 'badge-level ' + (nivel==='Iniciante'?'bronze':(nivel==='Intermediário'?'silver':(nivel==='Trader PRO'?'gold':'diamond')));
+
+    const { data: ops } = await sb.from('trader_diario').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false});
+    window.userOperations = ops || [];
+    
+    atualizarResumo();
 
 function atualizarResumo() {
     const hoje = new Date().toISOString().split('T')[0];
