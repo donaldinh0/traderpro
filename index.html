@@ -187,10 +187,16 @@
             </div>
         </div>
 
-        <label>Ativo que vai operar</label>
+        <label>Ativo Operado</label>
         <div class="asset-toggle-group" style="display:flex; gap:10px; margin-bottom:15px;">
             <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')">Índice (WIN)</button>
             <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')">Dólar (WDO)</button>
+        </div>
+
+        <label>Quantos contratos vai operar?</label>
+        <div class="input-group">
+            <i class="ri-file-list-3-line"></i>
+            <input type="number" id="calc-qty" class="input-field" placeholder="Ex: 1, 5, 10..." value="1">
         </div>
 
         <button class="btn-primary" onclick="calcularGerenciamento()">GERAR PLANO DO DIA</button>
@@ -213,20 +219,25 @@
         </div>
 
         <div style="background:#222; padding:15px; border-radius:8px; border-left: 4px solid var(--brand);">
-            <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#fff;">Capacidade Operacional (1 Ctt)</h4>
+            <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#fff;">Capacidade Operacional</h4>
             
             <p style="font-size:0.85rem; color:#ccc; margin-bottom:5px;">
-                Para não quebrar seu gerenciamento operando com <strong>1 contrato</strong>:
+                Operando com a mão fixa de <strong id="res-qty-show" style="color:#fff; font-size:1.1rem;">0</strong> contratos:
             </p>
 
             <ul style="font-size:0.85rem; color:#aaa; padding-left:20px; margin:0;">
-                <li style="margin-bottom:5px;">Sua perda diária é de: <strong id="res-max-pts" style="color:#fff;">0 pts</strong>.</li>
-                <li>Sua meta equivale a pegar: <strong id="res-target-pts" style="color:#fff;">0 pts</strong>.</li>
+                <li style="margin-bottom:8px;">
+                    Você pode errar até: <strong id="res-max-pts" style="color:#fff;">0 pts</strong> hoje.
+                    <br><small style="color:#666;">(Antes de atingir seu stop financeiro)</small>
+                </li>
+                <li>
+                    Para bater a meta, precisa de: <strong id="res-target-pts" style="color:#fff;">0 pts</strong>.
+                </li>
             </ul>
         </div>
 
         <p style="margin-top:15px; font-size:0.7rem; color:#666; text-align:center;">
-            *Valores calculados para o ativo <span id="res-asset-name">WIN</span>.
+            *Valores calculados para <span id="res-asset-name">WIN</span>
         </p>
     </div>
 </section>

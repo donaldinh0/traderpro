@@ -397,43 +397,53 @@ window.selectCalcAsset = function(asset) {
 }
 
 // --- CALCULADORA DE GERENCIAMENTO (FINANCEIRO -> PONTOS) ---
+// --- CALCULADORA DE GERENCIAMENTO (FINANCEIRO + CONTRATOS FIXOS) ---
 window.calcularGerenciamento = function() {
     // 1. Pegar Inputs
     const rawBank = document.getElementById('calc-bank').value;
     const riskPercent = Number(document.getElementById('calc-risk').value);
     const targetPercent = Number(document.getElementById('calc-target').value);
+    const qtyContracts = Number(document.getElementById('calc-qty').value); // Novo input
 
     // 2. Limpeza
     const bank = Number(rawBank.replace(/\D/g, "")) / 100;
 
-    // 3. Validação Básica
-    if (!bank || !riskPercent || !targetPercent) {
-        return alert("Por favor, preencha a Banca, % de Risco e % de Meta.");
+    // 3. Validação
+    if (!bank || !riskPercent || !targetPercent || !qtyContracts) {
+        return alert("Preencha Banca, Riscos, Metas e a Quantidade de Contratos.");
     }
+    if (qtyContracts < 1) return alert("A quantidade de contratos deve ser pelo menos 1.");
 
-    // 4. Definição do Valor do Ponto (Tick)
+    // 4. Definição do Valor do Ponto (Tick Unitário)
     // WIN: 0.20 | WDO: 10.00
-    const tickValue = calcAsset === 'WIN' ? 0.20 : 10.00;
+    const tickUnitValue = calcAsset === 'WIN' ? 0.20 : 10.00;
 
-    // 5. Cálculos Financeiros (O que importa pro bolso)
-    const limitLoss = bank * (riskPercent / 100);    // Stop Loss Financeiro (R$)
-    const targetGain = bank * (targetPercent / 100); // Meta Gain Financeira (R$)
+    // 5. Cálculos Financeiros (R$)
+    const limitLoss = bank * (riskPercent / 100);    // Stop Loss Financeiro
+    const targetGain = bank * (targetPercent / 100); // Meta Gain Financeira
 
-    // 6. Conversão para Pontos (Operando com 1 Contrato)
-    // "Quantos pontos eu preciso fazer (ou perder) com 1 contrato para atingir esses valores?"
-    const maxPointsLoss = Math.floor(limitLoss / tickValue);
-    const pointsToTarget = Math.ceil(targetGain / tickValue);
+    // 6. Cálculos de Capacidade em Pontos (Com a mão escolhida)
+    // Valor do ponto com a mão cheia = Qtd * Valor Unitário
+    const valuePerPointTotal = qtyContracts * tickUnitValue;
+
+    // Pontos que aguenta de ré (Stop)
+    const maxPointsLoss = Math.floor(limitLoss / valuePerPointTotal);
+
+    // Pontos necessários para meta
+    const pointsToTarget = Math.ceil(targetGain / valuePerPointTotal);
 
     // 7. Exibição na Tela
     // Financeiro
     document.getElementById('res-loss-limit').innerText = limitLoss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     document.getElementById('res-target-val').innerText = targetGain.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
-    // Pontos (Sobrevivência)
+    // Mostra a mão escolhida
+    document.getElementById('res-qty-show').innerText = qtyContracts;
+
+    // Pontos (Capacidade)
     document.getElementById('res-max-pts').innerText = maxPointsLoss + " pts";
     document.getElementById('res-target-pts').innerText = pointsToTarget + " pts";
     
-    // Nome do Ativo no rodapé
     document.getElementById('res-asset-name').innerText = calcAsset;
 
     // Mostrar Resultado
