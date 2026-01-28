@@ -194,3 +194,39 @@ body {
 .status-badge { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; }
 .status-badge.pending { background: #333; color: #aaa; }
 .status-badge.success { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
+
+/* --- ESTILO DOS BOTÕES WIN/WDO --- */
+
+/* 1. O contêiner que segura os botões (opcional, mas ajuda a agrupar) */
+.asset-toggle-group {
+    background: #111; /* Fundo bem escuro atrás dos botões */
+    padding: 5px;       /* Espacinho interno */
+    border-radius: 8px; /* Arredonda o grupo todo */
+    border: 1px solid #333; /* Borda sutil em volta do grupo */
+}
+
+/* 2. O Botão em estado normal (Desligado) */
+.toggle-btn {
+    background: transparent;    /* Sem fundo */
+    border: 1px solid #444;     /* Borda cinza visível */
+    color: #888;                /* Texto cinza */
+    border-radius: 6px;         /* Cantos do botão */
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;  /* Animação rápida */
+}
+
+/* 3. Quando passa o mouse */
+.toggle-btn:hover {
+    border-color: #666; /* Borda fica mais clara */
+    color: #fff;        /* Texto fica branco */
+}
+
+/* 4. O Botão Ativo (Selecionado) */
+.toggle-btn.active {
+    background: var(--brand);   /* Cor Neon/Destaque do seu tema */
+    border-color: var(--brand); /* Borda da mesma cor */
+    color: #000000;             /* Texto preto para contraste */
+    font-weight: 800;           /* Texto mais gordo */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Sombra para dar profundidade */
+}
