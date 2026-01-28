@@ -208,7 +208,7 @@ async function carregarTudo() {
                 <h2>Seus 30 dias grátis acabaram!</h2>
                 <p>Espero que tenha gostado do Trader PRO. Para continuar evoluindo, assine agora.</p>
                 <br>
-                <a href="https://lastlink.com/SEU_LINK_AQUI" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
+                <a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
                 <br><br>
                 <button onclick="logout()" style="background:none; border:none; color:#aaa; cursor:pointer;">Sair</button>
             </div>`;
