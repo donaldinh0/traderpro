@@ -158,28 +158,58 @@
             </section>
 
     <section id="tab-calculator" class="panel">
-    <div class="panel-header">
+    <div class="panel-header" style="margin-bottom: 25px;">
         <h2><i class="ri-calculator-line"></i> Planejamento Diário</h2>
     </div>
 
-    <div class="calc-form">
-        <label>Banca Total (R$)</label>
-        <div class="input-group">
-            <i class="ri-wallet-3-line"></i>
-            <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+    <div class="calc-form" style="display:flex; flex-direction:column; gap:20px;">
+        
+        <div>
+            <label style="display:block; margin-bottom:8px; color:#ccc;">Banca Total (R$)</label>
+            <div class="input-group">
+                <i class="ri-wallet-3-line"></i>
+                <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+            </div>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            
             <div>
-                <label>Risco Dia (%)</label>
+                <label style="display:block; margin-bottom:8px; color:#ccc;">Ativo</label>
+                <div class="asset-toggle-group" style="display:flex; height:45px;">
+                    <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')" style="flex:1;">WIN</button>
+                    <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')" style="flex:1;">WDO</button>
+                </div>
+            </div>
+
+            <div>
+                <label style="display:block; margin-bottom:8px; color:#ccc;">Contratos (Mão)</label>
+                <div class="input-group" style="height:45px;">
+                    <i class="ri-file-list-3-line"></i>
+                    <input type="number" id="calc-qty" class="input-field" placeholder="1" value="1" min="1">
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label style="color:#ccc;">Stop Diário</label>
+                    <div style="background:#333; border-radius:4px; padding:2px; display:flex;">
+                        <button id="mode-percent" onclick="setRiskMode('PERCENT')" style="background:var(--brand); border:none; color:#000; padding:2px 8px; border-radius:3px; font-size:0.7rem; cursor:pointer; font-weight:bold;">%</button>
+                        <button id="mode-points" onclick="setRiskMode('POINTS')" style="background:transparent; border:none; color:#666; padding:2px 8px; border-radius:3px; font-size:0.7rem; cursor:pointer; font-weight:bold;">Pts</button>
+                    </div>
+                </div>
+                
                 <div class="input-group">
-                    <i class="ri-alarm-warning-line"></i> 
-                    <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 3">
+                    <i id="icon-risk-mode" class="ri-percent-line"></i> 
+                    <input type="number" id="calc-stop-input" class="input-field" placeholder="Ex: 3" step="0.5">
                 </div>
             </div>
             
             <div>
-                <label>Meta Dia (%)</label>
+                <label style="display:block; margin-bottom:8px; color:#ccc;">Meta Dia (%)</label>
                 <div class="input-group">
                     <i class="ri-flag-2-line"></i> 
                     <input type="number" id="calc-target" class="input-field" placeholder="Ex: 5">
@@ -187,57 +217,43 @@
             </div>
         </div>
 
-        <label>Ativo Operado</label>
-        <div class="asset-toggle-group" style="display:flex; gap:10px; margin-bottom:15px;">
-            <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')">Índice (WIN)</button>
-            <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')">Dólar (WDO)</button>
-        </div>
-
-        <label>Quantos contratos vai operar?</label>
-        <div class="input-group">
-            <i class="ri-file-list-3-line"></i>
-            <input type="number" id="calc-qty" class="input-field" placeholder="Ex: 1, 5, 10..." value="1">
-        </div>
-
-        <button class="btn-primary" onclick="calcularGerenciamento()">GERAR PLANO DO DIA</button>
+        <button class="btn-primary" onclick="calcularGerenciamento()" style="margin-top:10px; height:50px; font-size:1rem;">
+            GERAR PLANO OPERACIONAL
+        </button>
     </div>
 
-    <div id="calc-result-box" class="result-box" style="display:none; margin-top:20px;">
+    <div id="calc-result-box" class="result-box" style="display:none; margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
         
-        <h3 style="text-align:center; color:#888; font-size:0.8rem; margin-bottom:15px; letter-spacing:1px; text-transform:uppercase;">Seus Limites Financeiros</h3>
+        <h3 style="text-align:center; color:#666; font-size:0.75rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:20px;">
+            Limites Calculados
+        </h3>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
-            <div style="background:rgba(231, 76, 60, 0.1); border:1px solid var(--loss); padding:15px; border-radius:10px; text-align:center;">
-                <span style="display:block; font-size:0.75rem; color:#aaa; margin-bottom:5px;">STOP LOSS (DIA)</span>
-                <strong id="res-loss-limit" style="font-size:1.5rem; color:var(--loss);">R$ 0,00</strong>
-            </div>
-
-            <div style="background:rgba(46, 204, 113, 0.1); border:1px solid var(--win); padding:15px; border-radius:10px; text-align:center;">
-                <span style="display:block; font-size:0.75rem; color:#aaa; margin-bottom:5px;">META GAIN (DIA)</span>
-                <strong id="res-target-val" style="font-size:1.5rem; color:var(--win);">R$ 0,00</strong>
-            </div>
-        </div>
-
-        <div style="background:#222; padding:15px; border-radius:8px; border-left: 4px solid var(--brand);">
-            <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#fff;">Capacidade Operacional</h4>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
             
-            <p style="font-size:0.85rem; color:#ccc; margin-bottom:5px;">
-                Operando com a mão fixa de <strong id="res-qty-show" style="color:#fff; font-size:1.1rem;">0</strong> contratos:
-            </p>
+            <div style="background:#1a1a1a; padding:15px; border-radius:12px; border-left: 3px solid var(--loss); text-align:center;">
+                <span style="display:block; font-size:0.75rem; color:#888; margin-bottom:8px;">LIMITE FINANCEIRO</span>
+                <strong id="res-loss-limit" style="font-size:1.6rem; color:#fff;">R$ 0,00</strong>
+            </div>
 
-            <ul style="font-size:0.85rem; color:#aaa; padding-left:20px; margin:0;">
-                <li style="margin-bottom:8px;">
-                    Você pode perder até: <strong id="res-max-pts" style="color:#fff;">0 pts</strong> hoje.
-                    <br><small style="color:#666;">(Antes de atingir seu stop diário)</small>
-                </li>
-                <li>
-                    Para bater a meta, precisa de: <strong id="res-target-pts" style="color:#fff;">0 pts</strong>.
-                </li>
-            </ul>
+            <div style="background:#1a1a1a; padding:15px; border-radius:12px; border-left: 3px solid var(--loss); text-align:center;">
+                <span style="display:block; font-size:0.75rem; color:#888; margin-bottom:8px;">CAPACIDADE (PTS)</span>
+                <strong id="res-max-pts" style="font-size:1.6rem; color:#fff;">0 pts</strong>
+            </div>
+
+            <div style="background:#1a1a1a; padding:15px; border-radius:12px; border-left: 3px solid var(--win); text-align:center;">
+                <span style="display:block; font-size:0.75rem; color:#888; margin-bottom:8px;">ALVO FINANCEIRO</span>
+                <strong id="res-target-val" style="font-size:1.6rem; color:#fff;">R$ 0,00</strong>
+            </div>
+
+            <div style="background:#1a1a1a; padding:15px; border-radius:12px; border-left: 3px solid var(--win); text-align:center;">
+                <span style="display:block; font-size:0.75rem; color:#888; margin-bottom:8px;">ALVO (PTS)</span>
+                <strong id="res-target-pts" style="font-size:1.6rem; color:#fff;">0 pts</strong>
+            </div>
+
         </div>
 
-        <p style="margin-top:15px; font-size:0.7rem; color:#666; text-align:center;">
-            *Valores calculados para <span id="res-asset-name">WIN</span>
+        <p style="margin-top:20px; font-size:0.75rem; color:#555; text-align:center;">
+            Cálculo baseado em <strong style="color:#aaa" id="res-qty-show">0</strong> contratos de <span id="res-asset-name">WIN</span>.
         </p>
     </div>
 </section>

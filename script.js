@@ -385,68 +385,95 @@ window.salvarChecklist = async function(tipo) {
     if(!error) { alert("Checklist Salvo! +5 Pontos."); document.getElementById('dash-score').innerText = novoScore; verificarChecklists(); }
 }
 
-// --- VARIÁVEL GLOBAL DA CALCULADORA ---
-let calcAsset = 'WIN'; // Padrão
+// --- VARIÁVEIS GLOBAIS DA CALCULADORA ---
+let calcAsset = 'WIN';
+let riskMode = 'PERCENT'; // 'PERCENT' ou 'POINTS'
 
-// Função para selecionar botão Índice/Dólar na calculadora
+// Função para selecionar botão Índice/Dólar
 window.selectCalcAsset = function(asset) {
     calcAsset = asset;
-    // Atualiza visual dos botões
     document.getElementById('btn-calc-win').className = asset === 'WIN' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('btn-calc-wdo').className = asset === 'WDO' ? 'toggle-btn active' : 'toggle-btn';
 }
 
-// --- CALCULADORA DE GERENCIAMENTO (FINANCEIRO -> PONTOS) ---
-// --- CALCULADORA DE GERENCIAMENTO (FINANCEIRO + CONTRATOS FIXOS) ---
-window.calcularGerenciamento = function() {
-    // 1. Pegar Inputs
-    const rawBank = document.getElementById('calc-bank').value;
-    const riskPercent = Number(document.getElementById('calc-risk').value);
-    const targetPercent = Number(document.getElementById('calc-target').value);
-    const qtyContracts = Number(document.getElementById('calc-qty').value); // Novo input
+// Função para Alternar entre % e Pontos no Stop
+window.setRiskMode = function(mode) {
+    riskMode = mode;
+    const btnPct = document.getElementById('mode-percent');
+    const btnPts = document.getElementById('mode-points');
+    const icon = document.getElementById('icon-risk-mode');
+    const input = document.getElementById('calc-stop-input');
 
-    // 2. Limpeza
+    if(mode === 'PERCENT') {
+        btnPct.style.background = 'var(--brand)'; btnPct.style.color = '#000';
+        btnPts.style.background = 'transparent'; btnPts.style.color = '#666';
+        icon.className = 'ri-percent-line';
+        input.placeholder = "Ex: 3 (para 3%)";
+    } else {
+        btnPts.style.background = 'var(--brand)'; btnPts.style.color = '#000';
+        btnPct.style.background = 'transparent'; btnPct.style.color = '#666';
+        icon.className = 'ri-ruler-line'; // Ícone de régua para pontos
+        input.placeholder = "Ex: 150 ou 10.5";
+    }
+}
+
+// --- CÁLCULO ATUALIZADO ---
+window.calcularGerenciamento = function() {
+    // 1. Inputs
+    const rawBank = document.getElementById('calc-bank').value;
+    const stopInput = Number(document.getElementById('calc-stop-input').value); // Pode ser % ou Pts
+    const targetPercent = Number(document.getElementById('calc-target').value);
+    const qtyContracts = Number(document.getElementById('calc-qty').value);
+
+    // 2. Limpeza e Validação
     const bank = Number(rawBank.replace(/\D/g, "")) / 100;
 
-    // 3. Validação
-    if (!bank || !riskPercent || !targetPercent || !qtyContracts) {
-        return alert("Preencha Banca, Riscos, Metas e a Quantidade de Contratos.");
+    if (!bank || !stopInput || !targetPercent || !qtyContracts) {
+        return alert("Preencha todos os campos do planejamento.");
     }
-    if (qtyContracts < 1) return alert("A quantidade de contratos deve ser pelo menos 1.");
 
-    // 4. Definição do Valor do Ponto (Tick Unitário)
-    // WIN: 0.20 | WDO: 10.00
-    const tickUnitValue = calcAsset === 'WIN' ? 0.20 : 10.00;
+    // 3. Constantes do Ativo
+    const tickValue = calcAsset === 'WIN' ? 0.20 : 10.00;
 
-    // 5. Cálculos Financeiros (R$)
-    const limitLoss = bank * (riskPercent / 100);    // Stop Loss Financeiro
-    const targetGain = bank * (targetPercent / 100); // Meta Gain Financeira
+    // 4. Lógica Híbrida (Onde a mágica acontece)
+    let limitLossFinanceiro = 0;
+    let maxPointsLoss = 0;
 
-    // 6. Cálculos de Capacidade em Pontos (Com a mão escolhida)
-    // Valor do ponto com a mão cheia = Qtd * Valor Unitário
-    const valuePerPointTotal = qtyContracts * tickUnitValue;
+    // Custo de 1 ponto com a mão escolhida
+    const valuePerPointTotal = qtyContracts * tickValue; 
 
-    // Pontos que aguenta de ré (Stop)
-    const maxPointsLoss = Math.floor(limitLoss / valuePerPointTotal);
+    if (riskMode === 'PERCENT') {
+        // Modo %: Calcula R$ primeiro, depois descobre os pontos
+        limitLossFinanceiro = bank * (stopInput / 100);
+        maxPointsLoss = limitLossFinanceiro / valuePerPointTotal;
+    } else {
+        // Modo Pts: O usuário disse "Aceito 15 pontos de ré".
+        // Cálculo: Pontos * Contratos * ValorTick
+        maxPointsLoss = stopInput;
+        limitLossFinanceiro = stopInput * valuePerPointTotal;
+    }
 
-    // Pontos necessários para meta
-    const pointsToTarget = Math.ceil(targetGain / valuePerPointTotal);
+    // 5. Cálculo da Meta (Sempre em %)
+    const targetGainFinanceiro = bank * (targetPercent / 100);
+    const pointsToTarget = targetGainFinanceiro / valuePerPointTotal;
 
-    // 7. Exibição na Tela
+    // 6. Formatação e Exibição
+    
     // Financeiro
-    document.getElementById('res-loss-limit').innerText = limitLoss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('res-target-val').innerText = targetGain.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    document.getElementById('res-loss-limit').innerText = limitLossFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    document.getElementById('res-target-val').innerText = targetGainFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
-    // Mostra a mão escolhida
+    // Pontos (Com suporte a decimais para Dólar)
+    // Se for Dólar, mostra 1 casa decimal (ex: 32.5). Se for Índice, arredonda (ex: 150).
+    const decimals = calcAsset === 'WDO' ? 1 : 0;
+    
+    document.getElementById('res-max-pts').innerText = maxPointsLoss.toFixed(decimals) + " pts";
+    document.getElementById('res-target-pts').innerText = pointsToTarget.toFixed(decimals) + " pts";
+    
+    // Rodapé
     document.getElementById('res-qty-show').innerText = qtyContracts;
-
-    // Pontos (Capacidade)
-    document.getElementById('res-max-pts').innerText = maxPointsLoss + " pts";
-    document.getElementById('res-target-pts').innerText = pointsToTarget + " pts";
-    
     document.getElementById('res-asset-name').innerText = calcAsset;
 
-    // Mostrar Resultado
     document.getElementById('calc-result-box').style.display = 'block';
 }
 
