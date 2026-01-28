@@ -396,53 +396,45 @@ window.selectCalcAsset = function(asset) {
     document.getElementById('btn-calc-wdo').className = asset === 'WDO' ? 'toggle-btn active' : 'toggle-btn';
 }
 
-// --- CALCULADORA DE PLANO DIÁRIO ---
+// --- CALCULADORA DE GERENCIAMENTO (FINANCEIRO -> PONTOS) ---
 window.calcularGerenciamento = function() {
     // 1. Pegar Inputs
     const rawBank = document.getElementById('calc-bank').value;
     const riskPercent = Number(document.getElementById('calc-risk').value);
-    const targetPercent = Number(document.getElementById('calc-target').value); // Novo input de Meta
-    const rawStop = document.getElementById('calc-stop').value;
+    const targetPercent = Number(document.getElementById('calc-target').value);
 
     // 2. Limpeza
     const bank = Number(rawBank.replace(/\D/g, "")) / 100;
-    const stopPoints = Number(rawStop.replace(/\D/g, ""));
 
-    // 3. Validação
-    if (!bank || !riskPercent || !targetPercent || !stopPoints) {
-        return alert("Preencha a Banca, % Risco, % Meta e o Stop Técnico.");
+    // 3. Validação Básica
+    if (!bank || !riskPercent || !targetPercent) {
+        return alert("Por favor, preencha a Banca, % de Risco e % de Meta.");
     }
 
-    // 4. Definição do Tick (WIN=0.20, WDO=10.00)
+    // 4. Definição do Valor do Ponto (Tick)
+    // WIN: 0.20 | WDO: 10.00
     const tickValue = calcAsset === 'WIN' ? 0.20 : 10.00;
 
-    // 5. Cálculos Financeiros
-    const limitLoss = bank * (riskPercent / 100);   // Quanto posso perder (Stop Financeiro)
-    const targetGain = bank * (targetPercent / 100); // Quanto quero ganhar (Meta Financeira)
+    // 5. Cálculos Financeiros (O que importa pro bolso)
+    const limitLoss = bank * (riskPercent / 100);    // Stop Loss Financeiro (R$)
+    const targetGain = bank * (targetPercent / 100); // Meta Gain Financeira (R$)
 
-    // 6. Cálculo de Contratos
-    // Custo de 1 contrato sendo estopado = Pontos * Tick
-    const riskPerContract = stopPoints * tickValue;
-    
-    // Quantos contratos cabem no limite de perda?
-    let contracts = Math.floor(limitLoss / riskPerContract);
-    if (contracts < 1) contracts = 0; // Proteção
+    // 6. Conversão para Pontos (Operando com 1 Contrato)
+    // "Quantos pontos eu preciso fazer (ou perder) com 1 contrato para atingir esses valores?"
+    const maxPointsLoss = Math.floor(limitLoss / tickValue);
+    const pointsToTarget = Math.ceil(targetGain / tickValue);
 
-    // 7. Cálculo de Pontos Necessários para a Meta
-    // Se eu entrar com X contratos, quantos pontos preciso pegar para bater a meta?
-    let pointsToTarget = 0;
-    if (contracts > 0) {
-        pointsToTarget = Math.ceil(targetGain / (contracts * tickValue));
-    }
-
-    // 8. Exibição
+    // 7. Exibição na Tela
+    // Financeiro
     document.getElementById('res-loss-limit').innerText = limitLoss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     document.getElementById('res-target-val').innerText = targetGain.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
-    document.getElementById('res-contracts').innerText = contracts;
+    // Pontos (Sobrevivência)
+    document.getElementById('res-max-pts').innerText = maxPointsLoss + " pts";
+    document.getElementById('res-target-pts').innerText = pointsToTarget + " pts";
     
-    document.getElementById('res-pts-target').innerText = pointsToTarget + " pts";
-    document.getElementById('res-stop-base').innerText = stopPoints;
+    // Nome do Ativo no rodapé
+    document.getElementById('res-asset-name').innerText = calcAsset;
 
     // Mostrar Resultado
     document.getElementById('calc-result-box').style.display = 'block';
