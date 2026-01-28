@@ -385,26 +385,77 @@ window.salvarChecklist = async function(tipo) {
     if(!error) { alert("Checklist Salvo! +5 Pontos."); document.getElementById('dash-score').innerText = novoScore; verificarChecklists(); }
 }
 
-// --- CALCULADORA ---
-window.calcularPositionSize = function() {
+// --- VARIÁVEL GLOBAL DA CALCULADORA ---
+let calcAsset = 'WIN'; // Padrão
+
+// Função para selecionar botão Índice/Dólar na calculadora
+window.selectCalcAsset = function(asset) {
+    calcAsset = asset;
+    // Atualiza visual dos botões
+    document.getElementById('btn-calc-win').className = asset === 'WIN' ? 'toggle-btn active' : 'toggle-btn';
+    document.getElementById('btn-calc-wdo').className = asset === 'WDO' ? 'toggle-btn active' : 'toggle-btn';
+}
+
+// --- NOVA LÓGICA DE CÁLCULO DE GERENCIAMENTO ---
+window.calcularGerenciamento = function() {
+    // 1. Pegar Valores
     const rawBank = document.getElementById('calc-bank').value;
-    const rawStop = document.getElementById('calc-stop').value;
     const riskPercent = Number(document.getElementById('calc-risk').value);
+    const rawStop = document.getElementById('calc-stop').value;
 
-    const bank = Number(rawBank.replace(/\D/g, "")) / 100;
-    const stopPoints = Number(rawStop.replace(/\D/g, ""));
+    // 2. Limpeza e Conversão
+    const bank = Number(rawBank.replace(/\D/g, "")) / 100; // R$
+    const stopPoints = Number(rawStop.replace(/\D/g, "")); // Pontos
 
-    if (!bank || !riskPercent || !stopPoints) return alert("Preencha todos os campos.");
+    // 3. Validação
+    if (!bank || !riskPercent || !stopPoints) {
+        return alert("Preencha a Banca, a % de Risco e o tamanho do Stop.");
+    }
 
-    const riskValue = bank * (riskPercent / 100);
-    const valuePerPoint = riskValue / stopPoints;
-    const contractsWIN = Math.floor(valuePerPoint / 0.20);
-    const contractsWDO = Math.floor(valuePerPoint / 10.00);
+    // 4. Definição do Valor do Ponto (Tick Value)
+    // WIN: R$ 0,20 por ponto | WDO: R$ 10,00 por ponto
+    const tickValue = calcAsset === 'WIN' ? 0.20 : 10.00;
 
-    document.getElementById('res-risk-value').innerText = riskValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('res-per-point').innerText = valuePerPoint.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('res-contracts-win').innerText = contractsWIN + " contratos";
-    document.getElementById('res-contracts-wdo').innerText = contractsWDO + " contratos";
+    // 5. CÁLCULOS
+    
+    // A. Limite Financeiro do Dia (Stop Day)
+    const dailyRiskLimit = bank * (riskPercent / 100);
+
+    // B. Custo de 1 Contrato com esse Stop Técnico
+    const costPerContract = stopPoints * tickValue;
+
+    // C. Quantos contratos cabem no risco do dia? (Mão Cheia)
+    // Math.floor para arredondar para baixo (segurança)
+    let maxContracts = Math.floor(dailyRiskLimit / costPerContract);
+    if (maxContracts < 1) maxContracts = 0; // Se não tiver dinheiro nem pra 1
+
+    // D. "Quantos trades a pessoa pode fazer?" (Survival Mode)
+    // Considerando mão mínima de 1 contrato. Quantos stops de 1 contrato cabem no limite diário?
+    const survivalTrades = Math.floor(dailyRiskLimit / costPerContract);
+    
+    // E. Retorno sobre a Banca (ROI)
+    // Se a pessoa entrar com a mão calculada (maxContracts) e buscar um Alvo de 2x o Stop
+    const potentialGain = (maxContracts * costPerContract * 2); 
+    const roi = (potentialGain / bank) * 100;
+
+    // 6. EXIBIR RESULTADOS NA TELA
+    document.getElementById('res-loss-limit').innerText = dailyRiskLimit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    
+    // Stop Financeiro (Se usar a mão recomendada)
+    const stopFinanceiroReal = maxContracts * costPerContract;
+    document.getElementById('res-stop-finance').innerText = stopFinanceiroReal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    document.getElementById('res-contracts').innerText = maxContracts;
+    
+    // Mostra quantos trades de 1 contrato (ou da mão cheia se for igual)
+    // Vamos mostrar a lógica: "Com 1 contrato, você tem X chances".
+    const chancesComMinimo = Math.floor(dailyRiskLimit / (1 * costPerContract));
+    document.getElementById('res-chances').innerText = chancesComMinimo + " Trades";
+
+    document.getElementById('res-roi').innerText = "+" + roi.toFixed(2) + "%";
+    document.getElementById('res-asset-name').innerText = calcAsset;
+
+    // Exibir caixa
     document.getElementById('calc-result-box').style.display = 'block';
 }
 

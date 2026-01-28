@@ -50,12 +50,12 @@
 
         <nav class="nav-pills">
             <button class="pill active" onclick="setTab('home')"><i class="ri-dashboard-line"></i> Visão Geral</button>
+            <button class="pill" onclick="setTab('calculator')"><i class="ri-calculator-line"></i> Calculadora</button>
             <button class="pill" onclick="setTab('operations')"><i class="ri-add-circle-line"></i> Registrar</button>
             <button class="pill" onclick="setTab('history')"><i class="ri-calendar-check-line"></i> Histórico Diário</button>
             <button class="pill" onclick="setTab('checklist')"><i class="ri-checkbox-circle-line"></i> Checklist</button>
             <button class="pill" onclick="setTab('analytics')"><i class="ri-bar-chart-line"></i> Performance</button>
-            <button class="pill" onclick="openLevelsModal()"><i class="ri-trophy-line"></i> Níveis</button>
-            <button class="pill" onclick="setTab('calculator')"><i class="ri-calculator-line"></i> Calculadora</button>
+            <button class="pill" onclick="openLevelsModal()"><i class="ri-trophy-line"></i> Níveis</button>            
         </nav>
 
         <main class="content-area">
@@ -92,10 +92,6 @@
                     <select id="op-asset" class="input-field" onchange="verificarAtivoDolar()">
                         <option value="WIN">WIN (Mini Índice)</option>
                         <option value="WDO">WDO (Mini Dólar)</option>
-                        <option value="ACAO">Ações (B3)</option>
-                        <option value="FOREX">FOREX (USD/EUR)</option>
-                        <option value="CRYPTO">CRYPTO (USD)</option>
-                        <option value="NASDAQ">NASDAQ/S&P500 (USD)</option>
                     </select>
 
                     <label>Tipo de Registro</label>
@@ -161,57 +157,76 @@
                 </div>
             </section>
 
-            <section id="tab-calculator" class="panel" hidden>
-    <div class="form-card">
-        <h3>🧮 Calculadora de Risco</h3>
-        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">
-            Defina o tamanho da sua posição com base no seu stop.
-        </p>
+            <section id="tab-calculator" class="panel">
+    <div class="panel-header">
+        <h2><i class="ri-calculator-line"></i> Gestão de Risco</h2>
+    </div>
 
-        <label>Tamanho da Banca (R$)</label>
-            <div class="input-group">
-                <i class="ri-wallet-3-line"></i>
-                <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+    <div class="calc-form">
+        <label>Tamanho da Banca Total (R$)</label>
+        <div class="input-group">
+            <i class="ri-wallet-3-line"></i>
+            <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+        </div>
+
+        <label>Risco Aceitável por Dia (%)</label>
+        <div class="input-group">
+            <i class="ri-pie-chart-line"></i>
+            <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 2 (para 2%)">
+        </div>
+
+        <label>Qual ativo vai operar?</label>
+        <div class="asset-toggle-group" style="display:flex; gap:10px; margin-bottom:15px;">
+            <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')">Índice (WIN)</button>
+            <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')">Dólar (WDO)</button>
+        </div>
+
+        <label>Tamanho do Stop Técnico (Pontos)</label>
+        <div class="input-group">
+            <i class="ri-ruler-line"></i>
+            <input type="text" id="calc-stop" class="input-field" placeholder="Ex: 150 pts" inputmode="numeric">
+        </div>
+
+        <button class="btn-primary" onclick="calcularGerenciamento()">CALCULAR GERENCIAMENTO</button>
+    </div>
+
+    <div id="calc-result-box" class="result-box" style="display:none; margin-top:20px;">
+        <h3>Planejamento do Dia</h3>
+        
+        <div class="result-row">
+            <span>Limite de Perda (Dia):</span>
+            <span class="res-value loss" id="res-loss-limit">R$ 0,00</span>
+        </div>
+
+        <div class="result-row">
+            <span>Stop Financeiro (Por Trade):</span>
+            <span class="res-value" id="res-stop-finance">R$ 0,00</span>
+        </div>
+
+        <hr style="border-color:#333; margin:10px 0;">
+
+        <div style="text-align:center; margin-bottom:15px;">
+            <span style="font-size:0.9rem; color:#aaa;">Tamanho da Mão Ideal</span>
+            <h1 id="res-contracts" style="color:var(--brand); font-size:2.5rem; margin:0;">0</h1>
+            <span style="font-size:0.9rem; color:#fff;">Contratos</span>
+        </div>
+
+        <div class="result-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div style="background:#222; padding:10px; border-radius:8px; text-align:center;">
+                <span style="display:block; font-size:0.8rem; color:#aaa;">Chances (Mão Mínima)</span>
+                <strong id="res-chances" style="font-size:1.2rem; color:#fff;">0 Trades</strong>
+                <small style="display:block; font-size:0.7rem; color:#666;">Até quebrar o dia</small>
             </div>
-
-            <label>Risco Aceitável por Trade (%)</label>
-            <div class="input-group">
-                <i class="ri-percent-line"></i>
-                <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 1">
-            </div>
-
-            <label>Tamanho do Stop Loss (Pontos)</label>
-            <div class="input-group">
-                <i class="ri-ruler-line"></i>
-                <input type="text" id="calc-stop" class="input-field" placeholder="0 pts" inputmode="numeric">
-            </div>
-
-        <button class="btn-primary full" onclick="calcularPositionSize()">CALCULAR LOTES</button>
-
-        <div id="calc-result-box" style="display:none; margin-top:30px; border-top:1px solid var(--border); padding-top:20px;">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <small>Risco Máximo (R$)</small>
-                    <h2 id="res-risk-value" style="color:var(--loss)">R$ 0,00</h2>
-                </div>
-                <div class="stat-card">
-                    <small>Valor por Ponto</small>
-                    <h2 id="res-per-point">R$ 0,00</h2>
-                </div>
-            </div>
-
-            <div style="background: var(--bg-dark); padding: 15px; border-radius: 12px; margin-top: 15px;">
-                <h4 style="margin:0 0 10px 0; color:var(--brand)">Sugestão de Contratos:</h4>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span>WIN (Índice):</span>
-                    <strong id="res-contracts-win" style="color:#fff">0</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span>WDO (Dólar):</span>
-                    <strong id="res-contracts-wdo" style="color:#fff">0</strong>
-                </div>
+            <div style="background:#222; padding:10px; border-radius:8px; text-align:center;">
+                <span style="display:block; font-size:0.8rem; color:#aaa;">Retorno na Banca</span>
+                <strong id="res-roi" style="font-size:1.2rem; color:#2ecc71;">0%</strong>
+                <small style="display:block; font-size:0.7rem; color:#666;">Se buscar alvo 2x</small>
             </div>
         </div>
+
+        <p style="margin-top:15px; font-size:0.85rem; color:#888; text-align:center;">
+            *Baseado no ativo <span id="res-asset-name">WIN</span>
+        </p>
     </div>
 </section>
 
@@ -229,9 +244,9 @@
             <table class="levels-table">
                 <thead><tr><th>Nível</th><th>Score</th></tr></thead>
                 <tbody>
-                    <tr><td><span class="badge-level bronze">Iniciante</span></td><td>0 - 100</td></tr>
-                    <tr><td><span class="badge-level silver">Intermediário</span></td><td>101 - 500</td></tr>
-                    <tr><td><span class="badge-level gold">Trader PRO</span></td><td>501 - 2000</td></tr>
+                    <tr><td><span class="badge-level bronze">Iniciante</span></td><td>0 - 300</td></tr>
+                    <tr><td><span class="badge-level silver">Intermediário</span></td><td>301 - 1000</td></tr>
+                    <tr><td><span class="badge-level gold">Trader PRO</span></td><td>1001 - 2000</td></tr>
                     <tr><td><span class="badge-level diamond">Lenda</span></td><td>2000+</td></tr>
                 </tbody>
             </table>
