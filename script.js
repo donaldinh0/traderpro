@@ -466,7 +466,7 @@ window.calcularGerenciamento = function() {
     document.getElementById('res-target-val').innerText = targetGainFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     // 2. Pontos (Formatação)
-    // Se for WDO, mostra 1 decimal (ex: 8.5). Se for WIN, sem decimais (ex: 150)
+    // Se for WDO, mostra 1 decimal  (ex: 8.5). Se for WIN, sem decimais (ex: 150)
     const decimals = calcAsset === 'WDO' ? 1 : 0;
     document.getElementById('res-max-pts').innerText = maxPointsLoss.toFixed(decimals) + " pts";
     document.getElementById('res-target-pts').innerText = pointsToTarget.toFixed(decimals) + " pts";
