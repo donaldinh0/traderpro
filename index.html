@@ -177,7 +177,7 @@
     <div style="display:flex; flex-direction:column; gap:5px;">
         <label style="color:#ccc; font-size:0.9rem; margin-left:2px;">Ativo</label>
         
-        <div class="asset-toggle-group" style="display:flex; height:45px;">
+        <div class="asset-toggle-group" style="display:flex; gap:10px; height:45px; background:transparent; border:none; padding:0;">
             <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')" style="flex:1;">WIN</button>
             <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')" style="flex:1;">WDO</button>
         </div>
@@ -186,20 +186,14 @@
     <div style="display:flex; flex-direction:column; gap:5px;">
         <label style="color:#ccc; font-size:0.9rem; margin-left:2px;">Contratos</label>
         
-        <div class="input-group" style="height:45px; margin:0;"> <i class="ri-file-list-3-line"></i>
+        <div class="input-group" style="height:45px; margin:0;">
+            <i class="ri-file-list-3-line"></i>
             <input type="number" id="calc-qty" class="input-field" placeholder="1" value="1" min="1">
         </div>
     </div>
 
 </div>
 
-            <div>
-                <label style="display:block; margin-bottom:8px; color:#ccc;">Contratos (Mão)</label>
-                <div class="input-group" style="height:45px;">
-                    <i class="ri-file-list-3-line"></i>
-                    <input type="number" id="calc-qty" class="input-field" placeholder="1" value="1" min="1">
-                </div>
-            </div>
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
