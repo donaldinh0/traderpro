@@ -385,7 +385,7 @@ window.salvarChecklist = async function(tipo) {
     if(!error) { alert("Checklist Salvo! +5 Pontos."); document.getElementById('dash-score').innerText = novoScore; verificarChecklists(); }
 }
 
-/// --- VARIÁVEIS GLOBAIS DA CALCULADORA ---
+// --- VARIÁVEIS GLOBAIS DA CALCULADORA ---
 let calcAsset = 'WIN'; 
 let riskMode = 'PERCENT'; // 'PERCENT' ou 'POINTS'
 
@@ -465,8 +465,7 @@ window.calcularGerenciamento = function() {
     
     document.getElementById('res-qty-show').innerText = qtyContracts;
     document.getElementById('res-asset-name').innerText = calcAsset;
-    
-    // Mostrar Resultado
+
     document.getElementById('calc-result-box').style.display = 'block';
 }
 
