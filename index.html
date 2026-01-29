@@ -3,238 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trader PRO</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    
+    <title>Trader PRO | Alta Performance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="Style.css">
-
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-    <div id="auth-screen" class="auth-container">
-        <div class="auth-box">
-            <h1 class="logo">TRADER<span class="highlight">PRO</span></h1>
-            
-            <div id="form-login">
-                <input type="email" id="email" placeholder="Seu E-mail" class="auth-input">
-                <input type="password" id="password" placeholder="Sua Senha" class="auth-input">
+    <div id="auth-screen">
+        <div class="login-card">
+            <div class="logo-area">
+                <h1>Trader PRO <span style="color:var(--brand)">.</span></h1>
+                <p>Login Seguro</p>
+            </div>
+            <div id="form-login" class="auth-form">
+                <div class="input-group"><i class="ri-mail-line"></i><input type="email" id="email" placeholder="E-mail"></div>
+                <div class="input-group"><i class="ri-lock-line"></i><input type="password" id="password" placeholder="Senha"></div>
                 <button onclick="login()" class="btn-primary">ENTRAR</button>
-                <p class="auth-link" onclick="toggleAuth('register')">Não tem conta? <b>Crie agora</b></p>
+                <p class="toggle-link" onclick="toggleAuth('register')">Criar conta</p>
             </div>
-
-            <div id="form-register" style="display:none;">
-                <input type="text" id="reg-name" placeholder="Seu Nome" class="auth-input">
-                <input type="text" id="reg-phone" placeholder="WhatsApp" class="auth-input">
-                <input type="email" id="reg-email" placeholder="E-mail" class="auth-input">
-                <input type="password" id="reg-password" placeholder="Senha" class="auth-input">
-                <button onclick="cadastro()" class="btn-primary">CRIAR CONTA GRÁTIS</button>
-                <p class="auth-link" onclick="toggleAuth('login')">Já tem conta? <b>Entrar</b></p>
+            <div id="form-register" class="auth-form" style="display: none;">
+                <div class="input-group"><i class="ri-user-line"></i><input type="text" id="reg-name" placeholder="Nome Completo"></div>
+                <div class="input-group"><i class="ri-phone-line"></i><input type="tel" id="reg-phone" placeholder="WhatsApp"></div>
+                <div class="input-group"><i class="ri-mail-line"></i><input type="email" id="reg-email" placeholder="E-mail"></div>
+                <div class="input-group"><i class="ri-lock-line"></i><input type="password" id="reg-password" placeholder="Senha"></div>
+                <button onclick="cadastro()" class="btn-primary">CRIAR CONTA</button>
+                <p class="toggle-link" onclick="toggleAuth('login')">Voltar para Login</p>
             </div>
-
-            <p id="msg-auth" class="msg-error"></p>
+            <div id="msg-auth" class="msg-error"></div>
         </div>
     </div>
 
-    <div id="app-screen" class="app-container" style="display:none;">
-        
+    <div id="app-screen" style="display: none;">
         <header class="app-header">
-            <div class="user-info">
-                <div class="avatar" id="avatar-initials">--</div>
-                <div>
+            <div class="user-profile">
+                <div class="avatar-circle" id="avatar-initials">TP</div>
+                <div class="user-info">
                     <h3 id="tp-user-name">Carregando...</h3>
-                    <span id="tp-user-level" class="badge-level">...</span>
+                    <span id="tp-user-level" class="badge-level">Iniciante</span>
                 </div>
             </div>
-            <button onclick="logout()" class="btn-icon"><i class="ri-logout-box-r-line"></i></button>
+            <button class="btn-logout" onclick="logout()"><i class="ri-logout-box-r-line"></i></button>
         </header>
 
-        <div class="score-board">
-            <span class="score-label">SEU SCORE</span>
-            <h1 id="dash-score">0</h1>
-            <div class="score-details">
-                <span>Winrate: <b id="dash-winrate">0%</b></span>
-                <span>Hoje: <b id="dash-today-result">R$ 0,00</b></span>
+        <nav class="nav-pills">
+            <button class="pill active" onclick="setTab('home')"><i class="ri-dashboard-line"></i> Visão Geral</button>
+            <button class="pill" onclick="setTab('calculator')"><i class="ri-calculator-line"></i> Calculadora</button>
+            <button class="pill" onclick="setTab('operations')"><i class="ri-add-circle-line"></i> Registrar</button>
+            <button class="pill" onclick="setTab('history')"><i class="ri-calendar-check-line"></i> Histórico Diário</button>
+            <button class="pill" onclick="setTab('checklist')"><i class="ri-checkbox-circle-line"></i> Checklist</button>
+            <button class="pill" onclick="setTab('analytics')"><i class="ri-bar-chart-line"></i> Performance</button>
+            <button class="pill" onclick="openLevelsModal()"><i class="ri-trophy-line"></i> Níveis</button>            
+        </nav>
+
+        <main class="content-area">
+            
+            <section id="tab-home" class="panel active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <small>Resultado Hoje</small>
+                        <h2 id="dash-today-result">R$ 0,00</h2>
+                    </div>
+                    <div class="stat-card">
+                        <small>Score Atual</small>
+                        <h2 id="dash-score" style="color:var(--brand)">0</h2>
+                    </div>
+                    <div class="stat-card">
+                        <small>Taxa de Acerto (Geral)</small>
+                        <h2 id="dash-winrate">0%</h2>
+                    </div>
+                </div>
+                <div class="section-header"><h4><i class="ri-history-line"></i> Últimos Trades</h4></div>
+                <div class="table-responsive">
+                    <table class="table-clean">
+                        <thead><tr><th>Data</th><th>Ativo</th><th>Res</th><th>Valor</th></tr></thead>
+                        <tbody id="home-recent-list"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="tab-operations" class="panel" hidden>
+                <div class="form-card">
+                    <h3>Registrar Trade</h3>
+                    
+                    <label>Ativo Operado</label>
+                    <select id="op-asset" class="input-field" onchange="verificarAtivoDolar()">
+                        <option value="WIN">WIN (Mini Índice)</option>
+                        <option value="WDO">WDO (Mini Dólar)</option>
+                    </select>
+
+                    <label>Tipo de Registro</label>
+                    <div class="toggle-switch">
+                        <button class="toggle-btn active" id="toggle-brl" onclick="setCurrency('FINANCEIRO')">Financeiro</button>
+                        <button class="toggle-btn" id="toggle-pts" onclick="setCurrency('PTS')">Pontos</button>
+                    </div>
+
+                    <label>Resultado</label>
+                    <div class="result-buttons">
+                        <button class="res-btn gain" id="btn-gain" onclick="selectType('GAIN')">GAIN</button>
+                        <button class="res-btn loss" id="btn-loss" onclick="selectType('LOSS')">LOSS</button>
+                        <button class="res-btn zero" id="btn-zero" onclick="selectType('0x0')">0x0</button>
+                    </div>
+
+                    <label id="lbl-value">Valor Financeiro (R$)</label>
+                    <input type="text" id="op-value" class="input-field" placeholder="0,00" inputmode="numeric">
+
+                    <div class="score-preview">
+                        <i class="ri-information-line"></i>
+                        <span id="score-feedback">Selecione o resultado.</span>
+                    </div>
+
+                    <button class="btn-primary full" onclick="salvarOperacao()">SALVAR NO DIÁRIO</button>
+                </div>
+            </section>
+
+            <section id="tab-history" class="panel" hidden>
+                <h3>Resumo Diário</h3>
+                <div id="daily-history-list" class="history-container">
+                    </div>
+            </section>
+
+            <section id="tab-checklist" class="panel" hidden>
+                <h3>Rotina Profissional</h3>
+                
+                <div class="check-box-container">
+                    <div class="checklist-header">
+                        <h4>Pré-Mercado</h4>
+                        <span id="status-pre" class="status-badge pending">Pendente</span>
+                    </div>
+                    <div class="check-group" id="group-pre">
+                        <label class="check-item"><input type="checkbox" class="chk-pre"> <span>Estou bem fisicamente/mentalmente?</span></label>
+                        <label class="check-item"><input type="checkbox" class="chk-pre"> <span>Analisei as notícias (Investing)?</span></label>
+                        <label class="check-item"><input type="checkbox" class="chk-pre"> <span>Tracei suportes e resistências?</span></label>
+                    </div>
+                    <button id="btn-pre" class="btn-primary full" onclick="salvarChecklist('PRE')">CONCLUIR PRÉ (+5 PTS)</button>
+                </div>
+
+                <div style="height: 20px;"></div>
+
+                <div class="check-box-container">
+                    <div class="checklist-header">
+                        <h4>Pós-Mercado</h4>
+                        <span id="status-pos" class="status-badge pending">Pendente</span>
+                    </div>
+                    <div class="check-group" id="group-pos">
+                        <label class="check-item"><input type="checkbox" class="chk-pos"> <span>Preenchi meu diário de trades?</span></label>
+                        <label class="check-item"><input type="checkbox" class="chk-pos"> <span>Respeitei meu Stop Loss diário?</span></label>
+                        <label class="check-item"><input type="checkbox" class="chk-pos"> <span>Identifiquei onde errei e acertei?</span></label>
+                    </div>
+                    <button id="btn-pos" class="btn-primary full" onclick="salvarChecklist('POS')">CONCLUIR PÓS (+5 PTS)</button>
+                </div>
+            </section>
+
+    <section id="tab-calculator" class="panel">
+    <div class="panel-header">
+        <h2><i class="ri-calculator-line"></i> Planejamento Diário</h2>
+    </div>
+
+    <div class="calc-form">
+        <label>Banca Total (R$)</label>
+        <div class="input-group">
+            <i class="ri-wallet-3-line"></i>
+            <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div>
+                <label>Risco Dia (%)</label>
+                <div class="input-group">
+                    <i class="ri-alarm-warning-line"></i> 
+                    <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 3">
+                </div>
+            </div>
+            
+            <div>
+                <label>Meta Dia (%)</label>
+                <div class="input-group">
+                    <i class="ri-flag-2-line"></i> 
+                    <input type="number" id="calc-target" class="input-field" placeholder="Ex: 5">
+                </div>
             </div>
         </div>
 
-        <nav class="nav-tabs">
-            <button class="pill active" onclick="setTab('home')">Visão Geral</button>
-            <button class="pill" onclick="setTab('calculator')">Calculadora</button>
-            <button class="pill" onclick="setTab('history')">Histórico</button>
-            <button class="pill" onclick="setTab('checklist')">Checklist</button>
-        </nav>
+        <label>Ativo que vai operar</label>
+        <div class="asset-toggle-group" style="display:flex; gap:10px; margin-bottom:15px;">
+            <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')">Índice (WIN)</button>
+            <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')">Dólar (WDO)</button>
+        </div>
 
-        <section id="tab-home" class="panel active">
-            <div class="panel-header">
-                <h2><i class="ri-add-circle-line"></i> Registrar Trade</h2>
+        <button class="btn-primary" onclick="calcularGerenciamento()">GERAR PLANO DO DIA</button>
+    </div>
+
+    <div id="calc-result-box" class="result-box" style="display:none; margin-top:20px;">
+        
+        <h3 style="text-align:center; color:#888; font-size:0.8rem; margin-bottom:15px; letter-spacing:1px; text-transform:uppercase;">Seus Limites Financeiros</h3>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+            <div style="background:rgba(231, 76, 60, 0.1); border:1px solid var(--loss); padding:15px; border-radius:10px; text-align:center;">
+                <span style="display:block; font-size:0.75rem; color:#aaa; margin-bottom:5px;">STOP LOSS (DIA)</span>
+                <strong id="res-loss-limit" style="font-size:1.5rem; color:var(--loss);">R$ 0,00</strong>
             </div>
+
+            <div style="background:rgba(46, 204, 113, 0.1); border:1px solid var(--win); padding:15px; border-radius:10px; text-align:center;">
+                <span style="display:block; font-size:0.75rem; color:#aaa; margin-bottom:5px;">META GAIN (DIA)</span>
+                <strong id="res-target-val" style="font-size:1.5rem; color:var(--win);">R$ 0,00</strong>
+            </div>
+        </div>
+
+        <div style="background:#222; padding:15px; border-radius:8px; border-left: 4px solid var(--brand);">
+            <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#fff;">Capacidade Operacional (1 Ctt)</h4>
             
-            <label>Ativo Operado</label>
-            <div class="input-group">
-                <i class="ri-bar-chart-grouped-line"></i>
-                <select id="op-asset" class="input-field" onchange="verificarAtivoDolar()">
-                    <option value="WIN">Mini Índice (WIN)</option>
-                    <option value="WDO">Mini Dólar (WDO)</option>
-                </select>
-            </div>
+            <p style="font-size:0.85rem; color:#ccc; margin-bottom:5px;">
+                Para não quebrar seu gerenciamento operando com <strong>1 contrato</strong>:
+            </p>
 
-            <label>Resultado da Operação</label>
-            <div class="result-selector">
-                <button class="res-btn gain" id="btn-gain" onclick="selectType('GAIN')">GAIN</button>
-                <button class="res-btn loss" id="btn-loss" onclick="selectType('LOSS')">LOSS</button>
-                <button class="res-btn zero" id="btn-zero" onclick="selectType('0x0')">0x0</button>
-            </div>
+            <ul style="font-size:0.85rem; color:#aaa; padding-left:20px; margin:0;">
+                <li style="margin-bottom:5px;">Sua perda diária é de: <strong id="res-max-pts" style="color:#fff;">0 pts</strong>.</li>
+                <li>Sua meta equivale a pegar: <strong id="res-target-pts" style="color:#fff;">0 pts</strong>.</li>
+            </ul>
+        </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; margin-bottom:5px;">
-                <label id="lbl-value">Valor Financeiro (R$)</label>
-                <div class="toggle-switch">
-                    <button class="toggle-btn active" id="toggle-brl" onclick="setCurrency('FINANCEIRO')">R$</button>
-                    <button class="toggle-btn" id="toggle-pts" onclick="setCurrency('PTS')">Pts</button>
-                </div>
-            </div>
-            
-            <div class="input-group">
-                <i class="ri-money-dollar-circle-line"></i>
-                <input type="text" id="op-value" class="input-field" placeholder="0,00" inputmode="numeric">
-            </div>
+        <p style="margin-top:15px; font-size:0.7rem; color:#666; text-align:center;">
+            *Valores calculados para o ativo <span id="res-asset-name">WIN</span>.
+        </p>
+    </div>
+</section>
 
-            <p id="score-feedback" class="feedback-text">Selecione o resultado para ver a pontuação.</p>
+<section id="tab-analytics" class="panel" hidden>
+                <h3>Curva de Patrimônio</h3>
+                <div class="chart-container"><canvas id="chart-equity"></canvas></div>
+            </section>
 
-            <button onclick="salvarOperacao()" class="btn-primary" style="margin-top:10px;">SALVAR NO DIÁRIO</button>
+        </main>
+    </div>
 
-            <div class="recent-ops">
-                <h4>Últimas Operações</h4>
-                <table class="mini-table">
-                    <tbody id="home-recent-list"></tbody>
-                </table>
-            </div>
-        </section>
-
-        <section id="tab-calculator" class="panel">
-            <div class="panel-header">
-                <h2><i class="ri-calculator-line"></i> Planejamento Diário</h2>
-            </div>
-
-            <div class="calc-form">
-                <label>Banca Total (R$)</label>
-                <div class="input-group">
-                    <i class="ri-wallet-3-line"></i>
-                    <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div>
-                        <label>Risco Dia (%)</label>
-                        <div class="input-group">
-                            <i class="ri-alarm-warning-line"></i> 
-                            <input type="number" id="calc-risk" class="input-field" placeholder="Ex: 3">
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label>Meta Dia (%)</label>
-                        <div class="input-group">
-                            <i class="ri-flag-2-line"></i> 
-                            <input type="number" id="calc-target" class="input-field" placeholder="Ex: 5">
-                        </div>
-                    </div>
-                </div>
-
-                <label>Ativo Operado</label>
-                <div class="asset-toggle-group" style="display:flex; gap:10px; margin-bottom:15px;">
-                    <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')">Índice (WIN)</button>
-                    <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')">Dólar (WDO)</button>
-                </div>
-
-                <label>Quantos contratos vai operar?</label>
-                <div class="input-group">
-                    <i class="ri-file-list-3-line"></i>
-                    <input type="number" id="calc-qty" class="input-field" placeholder="Ex: 1, 5, 10..." value="1">
-                </div>
-
-                <button class="btn-primary" onclick="calcularGerenciamento()">GERAR PLANO DO DIA</button>
-            </div>
-
-            <div id="calc-result-box" class="result-box" style="display:none; margin-top:20px;">
-                
-                <h3 style="text-align:center; color:#888; font-size:0.8rem; margin-bottom:15px; letter-spacing:1px; text-transform:uppercase;">Seus Limites Financeiros</h3>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
-                    <div style="background:rgba(231, 76, 60, 0.1); border:1px solid var(--loss); padding:15px; border-radius:10px; text-align:center;">
-                        <span style="display:block; font-size:0.75rem; color:#aaa; margin-bottom:5px;">STOP LOSS (DIA)</span>
-                        <strong id="res-loss-limit" style="font-size:1.5rem; color:var(--loss);">R$ 0,00</strong>
-                    </div>
-
-                    <div style="background:rgba(46, 204, 113, 0.1); border:1px solid var(--win); padding:15px; border-radius:10px; text-align:center;">
-                        <span style="display:block; font-size:0.75rem; color:#aaa; margin-bottom:5px;">META GAIN (DIA)</span>
-                        <strong id="res-target-val" style="font-size:1.5rem; color:var(--win);">R$ 0,00</strong>
-                    </div>
-                </div>
-
-                <div style="background:#222; padding:15px; border-radius:8px; border-left: 4px solid var(--brand);">
-                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:#fff;">Capacidade Operacional</h4>
-                    
-                    <p style="font-size:0.85rem; color:#ccc; margin-bottom:5px;">
-                        Operando com a mão fixa de <strong id="res-qty-show" style="color:#fff; font-size:1.1rem;">0</strong> contratos:
-                    </p>
-
-                    <ul style="font-size:0.85rem; color:#aaa; padding-left:20px; margin:0;">
-                        <li style="margin-bottom:8px;">
-                            Você pode errar até: <strong id="res-max-pts" style="color:#fff;">0 pts</strong> hoje.
-                            <br><small style="color:#666;">(Antes de atingir seu stop financeiro)</small>
-                        </li>
-                        <li>
-                            Para bater a meta, precisa de: <strong id="res-target-pts" style="color:#fff;">0 pts</strong>.
-                        </li>
-                    </ul>
-                </div>
-
-                <p style="margin-top:15px; font-size:0.7rem; color:#666; text-align:center;">
-                    *Valores calculados para <span id="res-asset-name">WIN</span>
-                </p>
-            </div>
-        </section>
-
-        <section id="tab-history" class="panel">
-            <div class="panel-header">
-                <h2><i class="ri-history-line"></i> Diário Completo</h2>
-            </div>
-            <div id="daily-history-list" class="history-list">
-                </div>
-        </section>
-
-        <section id="tab-checklist" class="panel">
-            <div class="panel-header">
-                <h2><i class="ri-checkbox-multiple-line"></i> Rotina Trader</h2>
-            </div>
-
-            <div class="checklist-card">
-                <div class="check-header">
-                    <h3>Pré-Market</h3>
-                    <span class="status-badge pending" id="status-pre">Pendente</span>
-                </div>
-                <label><input type="checkbox" class="chk-pre"> Analisei o Calendário Econômico</label>
-                <label><input type="checkbox" class="chk-pre"> Marquei Suportes e Resistências</label>
-                <label><input type="checkbox" class="chk-pre"> Estou bem emocionalmente</label>
-                <button class="btn-small" onclick="salvarChecklist('PRE')" id="btn-pre">Confirmar (+5 pts)</button>
-            </div>
-
-            <div class="checklist-card">
-                <div class="check-header">
-                    <h3>Pós-Market</h3>
-                    <span class="status-badge pending" id="status-pos">Pendente</span>
-                </div>
-                <label><input type="checkbox" class="chk-pos"> Preenchi o Diário</label>
-                <label><input type="checkbox" class="chk-pos"> Revisei meus erros</label>
-                <button class="btn-small" onclick="salvarChecklist('POS')" id="btn-pos">Confirmar (+5 pts)</button>
-            </div>
-        </section>
-
+    <div id="modal-levels" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h3>🏆 Níveis</h3><button onclick="closeLevelsModal()"><i class="ri-close-line"></i></button></div>
+            <table class="levels-table">
+                <thead><tr><th>Nível</th><th>Score</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="badge-level bronze">Iniciante</span></td><td>0 - 300</td></tr>
+                    <tr><td><span class="badge-level silver">Intermediário</span></td><td>301 - 1000</td></tr>
+                    <tr><td><span class="badge-level gold">Trader PRO</span></td><td>1001 - 2000</td></tr>
+                    <tr><td><span class="badge-level diamond">Lenda</span></td><td>2000+</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script src="script.js"></script>
