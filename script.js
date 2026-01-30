@@ -8,13 +8,13 @@ try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { cons
 // GLOBAIS
 let currentUser = null;
 let currentOpType = ''; 
-let inputMode = 'FINANCEIRO'; // 'FINANCEIRO' ou 'PTS'
-let currentCurrencySymbol = 'R$'; // R$ ou US$
+let inputMode = 'FINANCEIRO'; 
+let currentCurrencySymbol = 'R$'; 
 let userOperations = []; 
 
-// --- MÁSCARAS DE INPUT (Executa ao carregar) ---
+// --- MÁSCARAS DE INPUT ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Máscara do Registro de Trade
+    // 1. Registro
     const inputVal = document.getElementById('op-value');
     if(inputVal) {
         inputVal.addEventListener('input', function(e) {
@@ -30,23 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Máscara da Calculadora (Banca)
+    // 2. Calculadora (Banca)
     const inputBank = document.getElementById('calc-bank');
     if(inputBank) {
         inputBank.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, "");
             let number = Number(value) / 100;
             e.target.value = number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        });
-    }
-
-    // 3. Máscara da Calculadora (Stop)
-    const inputStop = document.getElementById('calc-stop');
-    if(inputStop) {
-        inputStop.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, "");
-            if (value === "") e.target.value = "";
-            else e.target.value = value + " pts";
         });
     }
 });
@@ -67,8 +57,7 @@ async function init() {
 }
 init();
 
-// --- AUTH (LOGIN / LOGOUT / TOGGLE) ---
-// A função que estava faltando:
+// --- AUTH ---
 function toggleAuth(mode) {
     document.getElementById('form-login').style.display = mode === 'register' ? 'none' : 'block';
     document.getElementById('form-register').style.display = mode === 'register' ? 'block' : 'none';
@@ -86,7 +75,7 @@ async function login() {
 
 async function logout() { await sb.auth.signOut(); location.reload(); }
 
-// --- CADASTRO INTELIGENTE (TRIAL 30 DIAS + VERIFICAÇÃO LASTLINK) ---
+// --- CADASTRO (SEM TRIAL AUTOMÁTICO) ---
 async function cadastro() {
     const nome = document.getElementById('reg-name').value;
     const phone = document.getElementById('reg-phone').value;
@@ -95,29 +84,25 @@ async function cadastro() {
     const msg = document.getElementById('msg-auth');
 
     if(!nome || !email || !password) return msg.innerText = "Preencha todos os campos.";
-    
     msg.innerText = "Criando sua conta...";
 
     try {
         // 1. Cria o Login
         const { data, error } = await sb.auth.signUp({ email, password });
-
-        if (error) {
-            msg.innerText = "Erro: " + error.message;
-            return;
-        }
+        if (error) { msg.innerText = "Erro: " + error.message; return; }
 
         if (data.user) {
-            // 2. Verifica se JÁ PAGOU na Lastlink (Lista VIP)
+            // 2. Verifica se JÁ PAGOU na Lastlink
             const { data: compra } = await sb.from('compras_lastlink').select('*').eq('email', email).single();
             
-            let statusInicial = 'teste_gratis'; // Padrão é Trial
-            if (compra) statusInicial = 'ativo'; // Se já pagou, vira Ativo direto
+            // LÓGICA ALTERADA: Padrão agora é 'pendente' (sem acesso)
+            let statusInicial = 'pendente'; 
+            if (compra) statusInicial = 'ativo'; // Só libera se já tiver o registro de compra
 
-            // 3. Calcula data de expiração (Hoje + 30 dias)
+            // Data de fim é AGORA (sem os 30 dias de presente)
             const dataHoje = new Date();
-            dataHoje.setDate(dataHoje.getDate() + 30); 
-            const dataFimTrial = dataHoje.toISOString();
+            // REMOVIDO: dataHoje.setDate(dataHoje.getDate() + 30); 
+            const dataFim = dataHoje.toISOString();
 
             // 4. Salva no Banco
             await sb.from('trader_perfil').insert([{ 
@@ -128,13 +113,14 @@ async function cadastro() {
                 score: 0, 
                 nivel: 'Iniciante',
                 status_assinatura: statusInicial,
-                fim_trial: dataFimTrial
+                fim_trial: dataFim
             }]);
 
             if(statusInicial === 'ativo') {
                 alert("Pagamento confirmado! Bem-vindo ao Trader PRO.");
             } else {
-                alert("Conta criada! Você ganhou 30 dias de acesso gratuito.");
+                // Mensagem atualizada
+                alert("Conta criada! Realize a assinatura para liberar seu acesso.");
             }
             toggleAuth('login');
         }
@@ -144,7 +130,7 @@ async function cadastro() {
     }
 }
 
-// --- NAVEGAÇÃO ENTRE ABAS ---
+// --- NAVEGAÇÃO ---
 window.setTab = function(tabName) {
     document.querySelectorAll('.panel').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
     document.querySelectorAll('.pill').forEach(el => el.classList.remove('active'));
@@ -152,7 +138,6 @@ window.setTab = function(tabName) {
     const panel = document.getElementById('tab-' + tabName);
     if(panel) { panel.style.display = 'block'; setTimeout(() => panel.classList.add('active'), 10); }
     
-    // Ativa botão correspondente
     document.querySelectorAll('.pill').forEach(b => { 
         const txt = b.innerText.toLowerCase();
         if(txt.includes(tabName === 'home' ? 'visão' : tabName === 'history' ? 'histórico' : tabName === 'calculator' ? 'calculadora' : tabName === 'analytics' ? 'performance' : tabName)) 
@@ -164,25 +149,26 @@ window.setTab = function(tabName) {
     if(tabName === 'history') renderHistory();
 }
 
-// --- CARREGAMENTO DE DADOS E CATRACA (BLOQUEIO) ---
+// --- CARREGAMENTO ---
 async function carregarTudo() {
     if(!currentUser) return;
 
     // Busca Perfil
     let { data: perfil, error } = await sb.from('trader_perfil').select('*').eq('user_id', currentUser.id).single();
 
-    // Fallback se não existir perfil
+    // Fallback se não existir perfil (Também sem trial automático)
     if (!perfil || error) {
         const nomeProv = currentUser.email.split('@')[0];
-        const dataHoje = new Date(); dataHoje.setDate(dataHoje.getDate() + 30);
+        const dataHoje = new Date(); 
+        // REMOVIDO: dataHoje.setDate(dataHoje.getDate() + 30);
         
         const { data: novo } = await sb.from('trader_perfil').insert([{ 
-            user_id: currentUser.id, nome: nomeProv, score: 0, status_assinatura: 'teste_gratis', fim_trial: dataHoje.toISOString() 
+            user_id: currentUser.id, nome: nomeProv, score: 0, status_assinatura: 'pendente', fim_trial: dataHoje.toISOString() 
         }]).select().single();
-        perfil = novo || { nome: nomeProv, score: 0, status_assinatura: 'teste_gratis', fim_trial: dataHoje.toISOString() };
+        perfil = novo || { nome: nomeProv, score: 0, status_assinatura: 'pendente', fim_trial: dataHoje.toISOString() };
     }
 
-    // --- CATRACA INTELIGENTE (TRIAL 30 DIAS) ---
+    // --- CATRACA (BLOQUEIO) ---
     const hoje = new Date();
     const dataFim = perfil.fim_trial ? new Date(perfil.fim_trial) : new Date();
     
@@ -193,9 +179,8 @@ async function carregarTudo() {
         acessoLiberado = true;
     } else {
         if (hoje < dataFim) {
-            acessoLiberado = true;
-            const diferencaTempo = dataFim - hoje;
-            diasRestantes = Math.ceil(diferencaTempo / (1000 * 60 * 60 * 24));
+            acessoLiberado = true; // Só entra aqui se a Lastlink enviar um trial via Webhook ou update manual
+            diasRestantes = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
         } else {
             acessoLiberado = false;
         }
@@ -204,9 +189,9 @@ async function carregarTudo() {
     if (!acessoLiberado) {
         document.getElementById('app-screen').innerHTML = `
             <div style="text-align:center; padding:50px; color:#fff;">
-                <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-timer-flash-line"></i></h1>
-                <h2>Sua assinatura expirou!</h2>
-                <p>Espero que tenha gostado do Trader PRO. Para continuar evoluindo, renove sua assinatura.</p>
+                <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-lock-2-line"></i></h1>
+                <h2>Acesso Bloqueado</h2>
+                <p>Para acessar o Trader PRO, é necessário uma assinatura ativa.</p>
                 <br>
                 <a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
                 <br><br>
@@ -215,8 +200,8 @@ async function carregarTudo() {
         return; 
     }
 
-    // AVISO DE TRIAL
-    if (perfil.status_assinatura !== 'ativo' && diasRestantes <= 30) {
+    // AVISO DE TRIAL (Só aparece se tiver trial ativo vindo de fora)
+    if (perfil.status_assinatura !== 'ativo' && diasRestantes > 0 && diasRestantes <= 30) {
         const avisoId = 'trial-warning';
         if(!document.getElementById(avisoId)){
             const aviso = document.createElement('div');
@@ -240,7 +225,6 @@ async function carregarTudo() {
 
     const { data: ops } = await sb.from('trader_diario').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false});
     window.userOperations = ops || [];
-    
     atualizarResumo();
 }
 
@@ -258,7 +242,7 @@ function atualizarResumo() {
     tbody.innerHTML = '';
     window.userOperations.slice(0, 5).forEach(op => {
         const color = op.resultado === 'GAIN' ? '#2ecc71' : (op.resultado === 'LOSS' ? '#e74c3c' : '#fff');
-        let isDollar = op.ativo.includes('FOREX') || op.ativo.includes('CRYPTO') || op.ativo.includes('NASDAQ');
+        let isDollar = op.ativo.includes('WDO') || op.ativo.includes('USD');
         let valFmt = Number(op.pontos).toLocaleString(isDollar?'en-US':'pt-BR', {style:'currency', currency:isDollar?'USD':'BRL'});
         if(op.ativo.includes('(Pts)')) valFmt = op.pontos + " pts";
         tbody.innerHTML += `<tr><td>${new Date(op.created_at).toLocaleDateString().slice(0,5)}</td><td>${op.ativo}</td><td style="color:${color};font-weight:bold;">${op.resultado}</td><td>${valFmt}</td></tr>`;
@@ -272,7 +256,7 @@ function atualizarResumo() {
 // --- OPERAÇÕES ---
 window.verificarAtivoDolar = function() {
     const asset = document.getElementById('op-asset').value;
-    const dolarAssets = ['FOREX', 'CRYPTO', 'NASDAQ'];
+    const dolarAssets = ['WDO', 'FOREX', 'CRYPTO'];
     currentCurrencySymbol = dolarAssets.includes(asset) ? 'US$' : 'R$';
     setCurrency(inputMode); 
     document.getElementById('op-value').value = '';
@@ -282,9 +266,7 @@ window.setCurrency = function(mode) {
     inputMode = mode;
     document.getElementById('toggle-brl').className = mode === 'FINANCEIRO' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('toggle-pts').className = mode === 'PTS' ? 'toggle-btn active' : 'toggle-btn';
-    const lbl = document.getElementById('lbl-value');
-    const toggleBtn = document.getElementById('toggle-brl');
-    if(mode === 'FINANCEIRO') { lbl.innerText = `Valor Financeiro (${currentCurrencySymbol})`; toggleBtn.innerText = "Financeiro"; } else { lbl.innerText = 'Quantidade de Pontos'; }
+    document.getElementById('lbl-value').innerText = mode === 'FINANCEIRO' ? `Valor Financeiro (${currentCurrencySymbol})` : 'Quantidade de Pontos';
     document.getElementById('op-value').value = '';
 }
 
@@ -307,10 +289,7 @@ window.salvarOperacao = async function() {
     if(!currentOpType || !rawValue) return alert("Preencha Resultado e Valor.");
     
     const btn = event.target; btn.innerText = "Salvando..."; btn.disabled = true;
-
-    let valParaSalvar = 0;
-    if (inputMode === 'FINANCEIRO') valParaSalvar = Number(rawValue.replace(/\D/g, "")) / 100;
-    else valParaSalvar = Number(rawValue);
+    let valParaSalvar = (inputMode === 'FINANCEIRO') ? Number(rawValue.replace(/\D/g, "")) / 100 : Number(rawValue);
 
     try {
         await sb.from('trader_diario').insert([{ user_id: currentUser.id, ativo: asset + (inputMode === 'PTS' ? ' (Pts)' : ''), resultado: currentOpType, pontos: valParaSalvar }]);
@@ -349,7 +328,7 @@ function renderHistory() {
         const dados = porDia[dia];
         const corSaldo = dados.financeiro >= 0 ? '#2ecc71' : '#e74c3c';
         const valFmt = dados.financeiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-        container.innerHTML += `<div class="history-day-card"><div class="day-header"><span class="day-date">${dia.split('-').reverse().join('/')}</span><span class="day-result" style="color:${corSaldo}">${valFmt}</span></div><div class="day-stats"><span><i class="ri-arrow-up-circle-line" style="color:#2ecc71"></i> ${dados.gainCount} Gains</span><span><i class="ri-arrow-down-circle-line" style="color:#e74c3c"></i> ${dados.lossCount} Loss</span><span class="day-pts">Score: <b>${dados.pontosGerados > 0 ? '+' : ''}${dados.pontosGerados}</b></span></div></div>`;
+        container.innerHTML += `<div class="history-day-card"><div class="day-header"><span class="day-date">${dia.split('-').reverse().join('/')}</span><span class="day-result" style="color:${corSaldo}">${valFmt}</span></div><div class="day-stats"><span><i class="ri-arrow-up-circle-line" style="color:#2ecc71"></i> ${dados.gainCount}</span><span><i class="ri-arrow-down-circle-line" style="color:#e74c3c"></i> ${dados.lossCount}</span><span class="day-pts">Score: <b>${dados.pontosGerados > 0 ? '+' : ''}${dados.pontosGerados}</b></span></div></div>`;
     });
 }
 
@@ -385,126 +364,87 @@ window.salvarChecklist = async function(tipo) {
     if(!error) { alert("Checklist Salvo! +5 Pontos."); document.getElementById('dash-score').innerText = novoScore; verificarChecklists(); }
 }
 
-// --- VARIÁVEIS GLOBAIS DA CALCULADORA ---
-let calcAsset = 'WIN'; 
-let riskMode = 'PERCENT';   // Começa como %
-let targetMode = 'PERCENT'; // Começa como %
+// ==========================================================
+// CALCULADORA
+// ==========================================================
 
-// Seleção de Ativo (WIN/WDO)
 window.selectCalcAsset = function(asset) {
-    calcAsset = asset;
     document.getElementById('btn-calc-win').className = asset === 'WIN' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('btn-calc-wdo').className = asset === 'WDO' ? 'toggle-btn active' : 'toggle-btn';
 }
 
-// Alternar Modo STOP (% ou Pts)
 window.setRiskMode = function(mode) {
-    riskMode = mode;
-    const btnPct = document.getElementById('btn-risk-pct');
-    const btnPts = document.getElementById('btn-risk-pts');
-    const icon = document.getElementById('icon-risk-mode');
+    document.getElementById('btn-risk-pct').className = mode === 'PERCENT' ? 'mt-btn active' : 'mt-btn';
+    document.getElementById('btn-risk-pts').className = mode === 'POINTS' ? 'mt-btn active' : 'mt-btn';
     const input = document.getElementById('calc-stop-input');
-
-    if(mode === 'PERCENT') {
-        btnPct.className = 'mt-btn active'; btnPts.className = 'mt-btn';
-        icon.className = 'ri-percent-line'; input.placeholder = "Ex: 3 (3%)";
-    } else {
-        btnPts.className = 'mt-btn active'; btnPct.className = 'mt-btn';
-        icon.className = 'ri-ruler-line'; input.placeholder = "Ex: 150 (Pts)";
-    }
-    input.value = ''; // Limpa o campo para evitar confusão
-}
-
-// Alternar Modo META (% ou Pts)
-window.setTargetMode = function(mode) {
-    targetMode = mode;
-    const btnPct = document.getElementById('btn-target-pct');
-    const btnPts = document.getElementById('btn-target-pts');
-    const icon = document.getElementById('icon-target-mode');
-    const input = document.getElementById('calc-target-input');
-
-    if(mode === 'PERCENT') {
-        btnPct.className = 'mt-btn active'; btnPts.className = 'mt-btn';
-        icon.className = 'ri-flag-2-line'; input.placeholder = "Ex: 5 (5%)";
-    } else {
-        btnPts.className = 'mt-btn active'; btnPct.className = 'mt-btn';
-        icon.className = 'ri-ruler-line'; input.placeholder = "Ex: 300 (Pts)";
-    }
+    input.placeholder = mode === 'PERCENT' ? "Ex: 3 (3%)" : "Ex: 150 (Pts)";
     input.value = '';
 }
 
-// --- CÁLCULO MATEMÁTICO REAL ---
+window.setTargetMode = function(mode) {
+    document.getElementById('btn-target-pct').className = mode === 'PERCENT' ? 'mt-btn active' : 'mt-btn';
+    document.getElementById('btn-target-pts').className = mode === 'POINTS' ? 'mt-btn active' : 'mt-btn';
+    const input = document.getElementById('calc-target-input');
+    input.placeholder = mode === 'PERCENT' ? "Ex: 5 (5%)" : "Ex: 300 (Pts)";
+    input.value = '';
+}
+
 window.calcularGerenciamento = function() {
-    // 1. Coleta os valores
+    const isWDO = document.getElementById('btn-calc-wdo').classList.contains('active');
+    const isRiskPct = document.getElementById('btn-risk-pct').classList.contains('active');
+    const isTargetPct = document.getElementById('btn-target-pct').classList.contains('active');
+
     const rawBank = document.getElementById('calc-bank').value;
     const stopInput = Number(document.getElementById('calc-stop-input').value);
     const targetInput = Number(document.getElementById('calc-target-input').value);
     const qtyContracts = Number(document.getElementById('calc-qty').value);
-
-    // Converte Banca para número
+    
     const bank = Number(rawBank.replace(/\D/g, "")) / 100;
 
-    // Validação
     if (!bank || !stopInput || !targetInput || !qtyContracts) {
-        return alert("Por favor, preencha todos os campos da calculadora.");
+        return alert("Preencha todos os campos da calculadora.");
     }
 
-    // 2. Configuração do Ativo
-    // WIN: 1 ponto = R$ 0,20
-    // WDO: 1 ponto = R$ 10,00
-    const tickValue = calcAsset === 'WIN' ? 0.20 : 10.00;
-    
-    // Valor financeiro de 1 ponto com a mão cheia (Contratos * Tick)
-    const valuePerPointTotal = qtyContracts * tickValue; 
+    const activeAsset = isWDO ? 'WDO' : 'WIN';
+    const tickValue = isWDO ? 10.00 : 0.20; 
+    const valuePerPointTotal = qtyContracts * tickValue;
 
-    // Variáveis de Resultado
     let limitLossFinanceiro = 0;
     let maxPointsLoss = 0;
     let targetGainFinanceiro = 0;
     let pointsToTarget = 0;
 
-    // 3. CÁLCULO DO STOP
-    if (riskMode === 'PERCENT') {
-        // Se usuário digitou %: Calculamos R$ primeiro, depois os Pontos
+    if (isRiskPct) {
         limitLossFinanceiro = bank * (stopInput / 100);
         maxPointsLoss = limitLossFinanceiro / valuePerPointTotal;
     } else {
-        // Se usuário digitou Pontos: Os pontos são o input, calculamos R$ depois
         maxPointsLoss = stopInput;
         limitLossFinanceiro = stopInput * valuePerPointTotal;
     }
 
-    // 4. CÁLCULO DA META
-    if (targetMode === 'PERCENT') {
-        // Se usuário digitou %
+    if (isTargetPct) {
         targetGainFinanceiro = bank * (targetInput / 100);
         pointsToTarget = targetGainFinanceiro / valuePerPointTotal;
     } else {
-        // Se usuário digitou Pontos
         pointsToTarget = targetInput;
         targetGainFinanceiro = pointsToTarget * valuePerPointTotal;
     }
 
-    // 5. EXIBIÇÃO NO HTML
     document.getElementById('res-loss-limit').innerText = limitLossFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     document.getElementById('res-target-val').innerText = targetGainFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
-    // ARREDONDAMENTO (Sem casas decimais para Dólar ou Índice)
-    // toFixed(0) garante número inteiro
     document.getElementById('res-max-pts').innerText = maxPointsLoss.toFixed(0) + " pts";
     document.getElementById('res-target-pts').innerText = pointsToTarget.toFixed(0) + " pts";
     
     document.getElementById('res-qty-show').innerText = qtyContracts;
-    document.getElementById('res-asset-name').innerText = calcAsset;
+    document.getElementById('res-asset-name').innerText = activeAsset;
 
-    // Mostrar a caixa
     document.getElementById('calc-result-box').style.display = 'block';
 }
 
 // --- MODAL E GRÁFICOS ---
 window.openLevelsModal = function() { document.getElementById('modal-levels').style.display = 'flex'; }
 window.closeLevelsModal = function() { document.getElementById('modal-levels').style.display = 'none'; }
-
 window.renderChart = function() {
     const ctx = document.getElementById('chart-equity'); if(!ctx) return;
     const cronoOps = [...window.userOperations].reverse();
