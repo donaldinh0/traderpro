@@ -205,8 +205,8 @@ async function carregarTudo() {
         document.getElementById('app-screen').innerHTML = `
             <div style="text-align:center; padding:50px; color:#fff;">
                 <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-timer-flash-line"></i></h1>
-                <h2>Seus 30 dias grátis acabaram!</h2>
-                <p>Espero que tenha gostado do Trader PRO. Para continuar evoluindo, assine agora.</p>
+                <h2>Sua assinatura expirou!</h2>
+                <p>Espero que tenha gostado do Trader PRO. Para continuar evoluindo, renove sua assinatura.</p>
                 <br>
                 <a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
                 <br><br>
