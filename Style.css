@@ -34,7 +34,7 @@ body {
 .logo-area p { color: var(--text-muted); margin-bottom: 30px; font-size: 0.9rem; }
 
 .input-group {
-    position: relative; margin-bottom: 15px;
+    position: relative;
 }
 .input-group i {
     position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
@@ -195,29 +195,185 @@ body {
 .status-badge.pending { background: #333; color: #aaa; }
 .status-badge.success { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
 
-/* --- MINI TOGGLE (Calculadora) --- */
+/* ============================================================
+   CALCULADORA PRO (CSS COMPLETO E ALINHADO)
+   ============================================================ */
+
+/* 1. O Container Principal do Formulário */
+.calc-form {
+    display: flex;
+    flex-direction: column;
+    gap: 25px; /* Mais espaço entre as linhas principais */
+    padding: 10px 0;
+}
+
+/* 2. Grid para colocar itens lado a lado (50% / 50%) */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px; /* Espaço lateral entre as colunas */
+    align-items: end; /* Alinha tudo pela base inferior */
+}
+
+/* 3. O Container Individual de cada Campo (Label + Input) */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Garante que o conteúdo cole embaixo */
+}
+
+/* 4. Estilo dos Títulos (Labels) */
+.form-group label {
+    display: block;
+    margin-bottom: 8px; /* Distância exata entre título e campo */
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-left: 2px;
+}
+
+/* ============================================================
+   A MÁGICA DO ALINHAMENTO (PADRONIZAÇÃO)
+   ============================================================ */
+
+/* Aplicamos isso tanto na caixa de botões quanto no input */
+.asset-toggle-box,
+.calc-form .input-group {
+    height: 50px;          /* ALTURA FIXA IGUAL PARA TODOS */
+    background: #0b0c10;   /* Fundo igual */
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;   /* Centraliza texto verticalmente */
+    width: 100%;           /* Ocupa todo o espaço da coluna */
+    box-sizing: border-box; /* Garante que a borda não aumente o tamanho */
+}
+
+/* Ajuste específico para os Botões (Padding interno e gap) */
+.asset-toggle-box {
+    padding: 4px;
+    gap: 5px;
+}
+
+/* Ajuste específico para o Input (Ícone e Campo) */
+.calc-form .input-group {
+    padding: 0 15px; /* Espaço para o ícone não colar na borda */
+}
+
+/* ============================================================
+   ELEMENTOS INTERNOS
+   ============================================================ */
+
+/* Botões WIN/WDO */
+.asset-toggle-box .toggle-btn {
+    flex: 1; /* Estica para ocupar espaço igual */
+    height: 100%; /* Ocupa toda altura disponível */
+    background: transparent;
+    border: none;
+    color: #666;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.asset-toggle-box .toggle-btn.active {
+    background: var(--brand);
+    color: #000;
+    font-weight: 800;
+    box-shadow: 0 2px 10px rgba(102, 252, 241, 0.15);
+}
+
+/* Campo de Digitação (Input) */
+.calc-form .input-group input {
+    height: 100%;
+    border: none;
+    background: transparent;
+    width: 100%;
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+}
+
+/* Ícones dentro do Input */
+.calc-form .input-group i {
+    font-size: 1.2rem;
+    color: #555;
+    margin-right: 10px;
+}
+
+/* ============================================================
+   TOGGLE PEQUENO (% / PTS)
+   ============================================================ */
+.label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px; /* Mesma margem dos labels normais */
+}
+.label-row label { margin-bottom: 0; }
+
 .mini-toggle-wrapper {
-    background: #000;
+    background: #0b0c10;
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 2px;
     display: flex;
-    gap: 2px;
+    height: 24px; /* Altura controlada do mini toggle */
+    align-items: center;
 }
+
 .mt-btn {
     background: transparent;
     border: none;
-    color: #666;
-    padding: 2px 8px;
-    font-size: 0.75rem;
+    color: #555;
+    padding: 0 8px;
+    font-size: 0.7rem;
+    font-weight: bold;
     border-radius: 4px;
     cursor: pointer;
-    font-weight: bold;
-    transition: 0.2s;
+    height: 100%;
+    display: flex; align-items: center;
 }
-.mt-btn:hover { color: #fff; }
 
 .mt-btn.active {
     background: var(--brand);
     color: #000;
 }
+
+/* ============================================================
+   RESULTADOS
+   ============================================================ */
+.result-box { margin-top: 30px; animation: fadeIn 0.4s; }
+
+.divider {
+    display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+}
+.divider span {
+    background: var(--panel); padding: 0 15px; color: #666;
+    font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
+}
+
+.res-card {
+    background: #0b0c10; padding: 15px; border-radius: 10px;
+    text-align: center; border: 1px solid var(--border);
+    border-left-width: 4px;
+}
+.res-card.loss { border-left-color: var(--loss); }
+.res-card.win { border-left-color: var(--gain); }
+.res-card span { display: block; font-size: 0.7rem; color: #888; margin-bottom: 5px; }
+.res-card strong { font-size: 1.4rem; color: #fff; }
+
+.info-box {
+    margin-top: 20px; background: #0b0c10; padding: 15px;
+    border-radius: 10px; border-left: 3px solid var(--brand); border: 1px solid var(--border);
+}
+.info-box h4 { margin: 0 0 10px 0; color: #fff; font-size: 0.9rem; }
+.info-box ul { padding-left: 20px; margin: 0; color: #aaa; font-size: 0.85rem; }
+.info-box li { margin-bottom: 6px; }
+
+.footer-note { text-align: center; color: #555; font-size: 0.75rem; margin-top: 15px; }

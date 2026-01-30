@@ -157,58 +157,64 @@
                 </div>
             </section>
 
-
-        
-  <section id="tab-calculator" class="panel">
+<section id="tab-calculator" class="panel">
     <div class="panel-header">
         <h2><i class="ri-calculator-line"></i> Planejamento Diário</h2>
     </div>
 
     <div class="calc-form">
-        <label style="margin-top:5px;">Banca Total (R$)</label>
-        <div class="input-group">
-            <i class="ri-wallet-3-line"></i>
-            <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+        
+        <div class="form-group">
+            <label>Banca Total (R$)</label>
+            <div class="input-group">
+                <i class="ri-wallet-3-line"></i>
+                <input type="text" id="calc-bank" class="input-field" placeholder="R$ 0,00" inputmode="numeric">
+            </div>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <div class="form-grid">
             
-            <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; margin-bottom:8px;">
-                    <label style="margin:0; color:var(--text-muted); font-size:0.9rem;">Stop Diário</label>
-                    
+            <div class="form-group">
+                <div class="label-row">
+                    <label>Stop Diário</label>
                     <div class="mini-toggle-wrapper">
-                        <button id="btn-mode-pct" onclick="setRiskMode('PERCENT')" class="mt-btn active">%</button>
-                        <button id="btn-mode-pts" onclick="setRiskMode('POINTS')" class="mt-btn">Pts</button>
+                        <button id="btn-risk-pct" onclick="setRiskMode('PERCENT')" class="mt-btn active">%</button>
+                        <button id="btn-risk-pts" onclick="setRiskMode('POINTS')" class="mt-btn">Pts</button>
                     </div>
                 </div>
-                
                 <div class="input-group">
-                    <i id="icon-stop-mode" class="ri-percent-line"></i> 
-                    <input type="number" id="calc-stop-input" class="input-field" placeholder="Ex: 3" step="0.1">
+                    <i id="icon-risk-mode" class="ri-percent-line"></i> 
+                    <input type="number" id="calc-stop-input" class="input-field" placeholder="Ex: 3">
                 </div>
             </div>
             
-            <div>
-                <label style="margin-top:5px;">Meta Dia (%)</label>
+            <div class="form-group">
+                <div class="label-row">
+                    <label>Meta Diária</label>
+                    <div class="mini-toggle-wrapper">
+                        <button id="btn-target-pct" onclick="setTargetMode('PERCENT')" class="mt-btn active">%</button>
+                        <button id="btn-target-pts" onclick="setTargetMode('POINTS')" class="mt-btn">Pts</button>
+                    </div>
+                </div>
                 <div class="input-group">
-                    <i class="ri-flag-2-line"></i> 
-                    <input type="number" id="calc-target" class="input-field" placeholder="Ex: 5">
+                    <i id="icon-target-mode" class="ri-flag-2-line"></i> 
+                    <input type="number" id="calc-target-input" class="input-field" placeholder="Ex: 5">
                 </div>
             </div>
+
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:5px;">
-            <div>
-                <label style="margin-top:5px;">Ativo</label>
-                <div class="asset-toggle-group" style="display:flex; gap:5px; margin-bottom:15px;">
-                    <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')" style="padding:10px 5px; font-size:0.8rem;">WIN</button>
-                    <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')" style="padding:10px 5px; font-size:0.8rem;">WDO</button>
+        <div class="form-grid align-bottom">
+            <div class="form-group">
+                <label>Ativo</label>
+                <div class="asset-toggle-box">
+                    <button class="toggle-btn active" id="btn-calc-win" onclick="selectCalcAsset('WIN')">WIN</button>
+                    <button class="toggle-btn" id="btn-calc-wdo" onclick="selectCalcAsset('WDO')">WDO</button>
                 </div>
             </div>
 
-            <div>
-                <label style="margin-top:5px;">Contratos</label>
+            <div class="form-group">
+                <label>Contratos</label>
                 <div class="input-group">
                     <i class="ri-file-list-3-line"></i>
                     <input type="number" id="calc-qty" class="input-field" placeholder="1" value="1">
@@ -216,35 +222,38 @@
             </div>
         </div>
 
-        <button class="btn-primary" onclick="calcularGerenciamento()">GERAR PLANO</button>
+        <button class="btn-primary" onclick="calcularGerenciamento()" style="margin-top: 20px;">GERAR PLANO</button>
     </div>
 
-    <div id="calc-result-box" class="result-box" style="display:none; margin-top:20px;">
-        
-        <h3 style="text-align:center; color:#888; font-size:0.7rem; margin-bottom:15px; letter-spacing:1px; text-transform:uppercase;">Seus Limites</h3>
+    <div id="calc-result-box" class="result-box" style="display:none; margin-top:30px;">
+        <div class="divider"><span>LIMITES CALCULADOS</span></div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
-            <div style="background:rgba(231, 76, 60, 0.1); border:1px solid var(--loss); padding:10px; border-radius:10px; text-align:center;">
-                <span style="display:block; font-size:0.7rem; color:#aaa;">STOP (R$)</span>
-                <strong id="res-loss-limit" style="font-size:1.4rem; color:var(--loss);">R$ 0,00</strong>
+        <div class="form-grid">
+            <div class="res-card loss">
+                <span>STOP (R$)</span>
+                <strong id="res-loss-limit">R$ 0,00</strong>
             </div>
-
-            <div style="background:rgba(46, 204, 113, 0.1); border:1px solid var(--win); padding:10px; border-radius:10px; text-align:center;">
-                <span style="display:block; font-size:0.7rem; color:#aaa;">META (R$)</span>
-                <strong id="res-target-val" style="font-size:1.4rem; color:var(--win);">R$ 0,00</strong>
+            <div class="res-card win">
+                <span>META (R$)</span>
+                <strong id="res-target-val">R$ 0,00</strong>
             </div>
         </div>
 
-        <div style="background:#0b0c10; padding:15px; border-radius:8px; border-left: 3px solid var(--brand); border: 1px solid var(--border);">
-            <h4 style="margin:0 0 10px 0; font-size:0.85rem; color:#fff;">Capacidade (<span id="res-qty-show">1</span> Ctt)</h4>
-            <ul style="font-size:0.8rem; color:#aaa; padding-left:20px; margin:0;">
-                <li style="margin-bottom:5px;">Stop aguenta: <strong id="res-max-pts" style="color:#fff;">0 pts</strong>.</li>
-                <li>Meta precisa de: <strong id="res-target-pts" style="color:#fff;">0 pts</strong>.</li>
+        <div class="info-box">
+            <h4><i class="ri-shield-check-line"></i> Capacidade (<span id="res-qty-show">1</span> Ctt)</h4>
+            <ul>
+                <li style="margin-bottom:8px;">
+                    Seu stop suporta até: <strong id="res-max-pts" style="color:#fff;">0 pts</strong>.
+                </li>
+                <li>
+                    Para a meta, busque: <strong id="res-target-pts" style="color:#fff;">0 pts</strong>.
+                </li>
             </ul>
         </div>
-        <p style="margin-top:10px; font-size:0.7rem; color:#666; text-align:center;">Ativo: <span id="res-asset-name">WIN</span></p>
+        <p class="footer-note">Ativo Base: <span id="res-asset-name">WIN</span></p>
     </div>
-</section>
+</section> 
+  
 
 <section id="tab-analytics" class="panel" hidden>
                 <h3>Curva de Patrimônio</h3>

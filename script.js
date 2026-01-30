@@ -387,85 +387,117 @@ window.salvarChecklist = async function(tipo) {
 
 // --- VARIÁVEIS GLOBAIS DA CALCULADORA ---
 let calcAsset = 'WIN'; 
-let riskMode = 'PERCENT'; // 'PERCENT' ou 'POINTS'
+let riskMode = 'PERCENT';   // Começa como %
+let targetMode = 'PERCENT'; // Começa como %
 
-// Seleção de Ativo
+// Seleção de Ativo (WIN/WDO)
 window.selectCalcAsset = function(asset) {
     calcAsset = asset;
     document.getElementById('btn-calc-win').className = asset === 'WIN' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('btn-calc-wdo').className = asset === 'WDO' ? 'toggle-btn active' : 'toggle-btn';
 }
 
-// Troca entre % e Pts
+// Alternar Modo STOP (% ou Pts)
 window.setRiskMode = function(mode) {
     riskMode = mode;
-    const btnPct = document.getElementById('btn-mode-pct');
-    const btnPts = document.getElementById('btn-mode-pts');
-    const icon = document.getElementById('icon-stop-mode');
+    const btnPct = document.getElementById('btn-risk-pct');
+    const btnPts = document.getElementById('btn-risk-pts');
+    const icon = document.getElementById('icon-risk-mode');
     const input = document.getElementById('calc-stop-input');
 
-    // Atualiza visual
     if(mode === 'PERCENT') {
-        btnPct.className = 'mt-btn active';
-        btnPts.className = 'mt-btn';
-        icon.className = 'ri-percent-line';
-        input.placeholder = "Ex: 3";
+        btnPct.className = 'mt-btn active'; btnPts.className = 'mt-btn';
+        icon.className = 'ri-percent-line'; input.placeholder = "Ex: 3 (3%)";
     } else {
-        btnPts.className = 'mt-btn active';
-        btnPct.className = 'mt-btn';
-        icon.className = 'ri-ruler-line'; // Ícone de régua
-        input.placeholder = "Ex: 150 ou 10.5";
+        btnPts.className = 'mt-btn active'; btnPct.className = 'mt-btn';
+        icon.className = 'ri-ruler-line'; input.placeholder = "Ex: 150 (Pts)";
     }
-    input.value = ''; // Limpa para evitar confusão
+    input.value = ''; // Limpa o campo para evitar confusão
 }
 
-// --- CÁLCULO HÍBRIDO (Com Decimais) ---
+// Alternar Modo META (% ou Pts)
+window.setTargetMode = function(mode) {
+    targetMode = mode;
+    const btnPct = document.getElementById('btn-target-pct');
+    const btnPts = document.getElementById('btn-target-pts');
+    const icon = document.getElementById('icon-target-mode');
+    const input = document.getElementById('calc-target-input');
+
+    if(mode === 'PERCENT') {
+        btnPct.className = 'mt-btn active'; btnPts.className = 'mt-btn';
+        icon.className = 'ri-flag-2-line'; input.placeholder = "Ex: 5 (5%)";
+    } else {
+        btnPts.className = 'mt-btn active'; btnPct.className = 'mt-btn';
+        icon.className = 'ri-ruler-line'; input.placeholder = "Ex: 300 (Pts)";
+    }
+    input.value = '';
+}
+
+// --- CÁLCULO MATEMÁTICO REAL ---
 window.calcularGerenciamento = function() {
+    // 1. Coleta os valores
     const rawBank = document.getElementById('calc-bank').value;
-    const stopInput = Number(document.getElementById('calc-stop-input').value); // Aceita decimais
-    const targetPercent = Number(document.getElementById('calc-target').value);
+    const stopInput = Number(document.getElementById('calc-stop-input').value);
+    const targetInput = Number(document.getElementById('calc-target-input').value);
     const qtyContracts = Number(document.getElementById('calc-qty').value);
 
+    // Converte Banca para número
     const bank = Number(rawBank.replace(/\D/g, "")) / 100;
 
-    if (!bank || !stopInput || !targetPercent || !qtyContracts) {
-        return alert("Preencha todos os campos da calculadora.");
+    // Validação
+    if (!bank || !stopInput || !targetInput || !qtyContracts) {
+        return alert("Por favor, preencha todos os campos da calculadora.");
     }
 
-    // Config do Ativo
+    // 2. Configuração do Ativo
+    // WIN: 1 ponto = R$ 0,20
+    // WDO: 1 ponto = R$ 10,00
     const tickValue = calcAsset === 'WIN' ? 0.20 : 10.00;
-    const valuePerPointTotal = qtyContracts * tickValue; // Quanto vale 1 ponto com a mão cheia
+    
+    // Valor financeiro de 1 ponto com a mão cheia (Contratos * Tick)
+    const valuePerPointTotal = qtyContracts * tickValue; 
 
+    // Variáveis de Resultado
     let limitLossFinanceiro = 0;
     let maxPointsLoss = 0;
+    let targetGainFinanceiro = 0;
+    let pointsToTarget = 0;
 
-    // LÓGICA DO STOP (Onde muda a conta)
+    // 3. CÁLCULO DO STOP
     if (riskMode === 'PERCENT') {
-        // Se escolheu %, calcula R$ baseado na banca
+        // Se usuário digitou %: Calculamos R$ primeiro, depois os Pontos
         limitLossFinanceiro = bank * (stopInput / 100);
         maxPointsLoss = limitLossFinanceiro / valuePerPointTotal;
     } else {
-        // Se escolheu PONTOS, calcula R$ baseado nos pontos x contratos
+        // Se usuário digitou Pontos: Os pontos são o input, calculamos R$ depois
         maxPointsLoss = stopInput;
         limitLossFinanceiro = stopInput * valuePerPointTotal;
     }
 
-    // LÓGICA DA META (Sempre %)
-    const targetGainFinanceiro = bank * (targetPercent / 100);
-    const pointsToTarget = targetGainFinanceiro / valuePerPointTotal;
+    // 4. CÁLCULO DA META
+    if (targetMode === 'PERCENT') {
+        // Se usuário digitou %
+        targetGainFinanceiro = bank * (targetInput / 100);
+        pointsToTarget = targetGainFinanceiro / valuePerPointTotal;
+    } else {
+        // Se usuário digitou Pontos
+        pointsToTarget = targetInput;
+        targetGainFinanceiro = pointsToTarget * valuePerPointTotal;
+    }
 
-    // EXIBIÇÃO
+    // 5. EXIBIÇÃO NO HTML
     document.getElementById('res-loss-limit').innerText = limitLossFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     document.getElementById('res-target-val').innerText = targetGainFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
-    // Formatação dos Pontos (Dólar aceita 1 casa decimal, Índice 0)
-    const decimals = calcAsset === 'WDO' ? 1 : 0;
-    document.getElementById('res-max-pts').innerText = maxPointsLoss.toFixed(decimals) + " pts";
-    document.getElementById('res-target-pts').innerText = pointsToTarget.toFixed(decimals) + " pts";
+    // ARREDONDAMENTO (Sem casas decimais para Dólar ou Índice)
+    // toFixed(0) garante número inteiro
+    document.getElementById('res-max-pts').innerText = maxPointsLoss.toFixed(0) + " pts";
+    document.getElementById('res-target-pts').innerText = pointsToTarget.toFixed(0) + " pts";
     
     document.getElementById('res-qty-show').innerText = qtyContracts;
     document.getElementById('res-asset-name').innerText = calcAsset;
 
+    // Mostrar a caixa
     document.getElementById('calc-result-box').style.display = 'block';
 }
 
