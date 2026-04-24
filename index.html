@@ -75,7 +75,8 @@
         </header>
 
         <nav class="nav-pills">
-            <button class="pill active" onclick="setTab('home')"><i class="ri-dashboard-line"></i> Visão Geral</button>
+            <button class="pill active" onclick="setTab('welcome')"><i class="ri-rocket-line"></i> Início</button>
+            <button class="pill" onclick="setTab('home')"><i class="ri-dashboard-line"></i> Visão Geral</button>
             <button class="pill" onclick="setTab('calculator')"><i class="ri-calculator-line"></i> Calculadora</button>
             <button class="pill" onclick="setTab('operations')"><i class="ri-add-circle-line"></i> Registrar</button>
             <button class="pill" onclick="setTab('history')"><i class="ri-calendar-check-line"></i> Histórico Diário</button>
@@ -86,7 +87,61 @@
 
         <main class="content-area">
             
-            <section id="tab-home" class="panel active">
+            <section id="tab-welcome" class="panel active">
+                <div class="welcome-header" style="margin-bottom: 30px;">
+                    <h1 style="color: #fff; font-size: 1.8rem;">Bem-vindo ao <span style="color: var(--brand);">Trader PRO</span></h1>
+                    <p style="color: #aaa;">Seu ambiente central de gestão operacional e disciplina na TSR.</p>
+                </div>
+
+                <div class="tutorial-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    
+                    <div class="tut-card" style="background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333;">
+                        <h3 style="color: var(--brand); display: flex; align-items: center; gap: 10px;">
+                            <i class="ri-calculator-line"></i> Calculadora
+                        </h3>
+                        <p style="font-size: 0.9rem; color: #ccc; line-height: 1.5; margin-top: 10px;">
+                            Sua primeira linha de defesa. Antes de abrir o Profit, defina sua banca e o risco aceitável. 
+                            O sistema entregará a quantidade exata de contratos e os pontos de limite que você deve respeitar.
+                        </p>
+                    </div>
+
+                    <div class="tut-card" style="background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333;">
+                        <h3 style="color: var(--brand); display: flex; align-items: center; gap: 10px;">
+                            <i class="ri-booklet-line"></i> Registro de Trades
+                        </h3>
+                        <p style="font-size: 0.9rem; color: #ccc; line-height: 1.5; margin-top: 10px;">
+                            Registrar seus trades é o que gera sua curva de capital. Na aba "Registrar", selecione o ativo, 
+                            o resultado (Gain/Loss) e o valor financeiro para atualizar seu score e seu histórico.
+                        </p>
+                    </div>
+
+                    <div class="tut-card" style="background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333;">
+                        <h3 style="color: var(--brand); display: flex; align-items: center; gap: 10px;">
+                            <i class="ri-checkbox-circle-line"></i> Checklist de Disciplina
+                        </h3>
+                        <p style="font-size: 0.9rem; color: #ccc; line-height: 1.5; margin-top: 10px;">
+                            Sua blindagem mental. Use o Pré-Mercado para garantir que está preparado e o Pós-Mercado para 
+                            revisar o dia. Isso evita operações por impulso e mantém a rotina profissional.
+                        </p>
+                    </div>
+
+                    <div class="tut-card" style="background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333;">
+                        <h3 style="color: var(--brand); display: flex; align-items: center; gap: 10px;">
+                            <i class="ri-line-chart-line"></i> Performance
+                        </h3>
+                        <p style="font-size: 0.9rem; color: #ccc; line-height: 1.5; margin-top: 10px;">
+                            Visualize sua evolução. A aba Performance desenha seu gráfico de patrimônio ao longo do tempo, 
+                            ajudando você a enxergar a consistência de longo prazo além do resultado diário.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="start-action" style="margin-top: 40px; text-align: center; border-top: 1px solid #333; padding-top: 30px;">
+                    <button onclick="setTab('home')" class="btn-primary" style="max-width: 250px;">IR PARA O PAINEL GERAL</button>
+                </div>
+            </section>
+
+            <section id="tab-home" class="panel" hidden>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <small>Resultado Hoje</small>
@@ -183,7 +238,7 @@
                 </div>
             </section>
 
-<section id="tab-calculator" class="panel">
+<section id="tab-calculator" class="panel" hidden>
     <div class="panel-header">
         <h2><i class="ri-calculator-line"></i> Planejamento Diário</h2>
     </div>

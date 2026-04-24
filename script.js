@@ -184,14 +184,33 @@ async function salvarNovaSenha() {
 
 // --- NAVEGAÇÃO ---
 window.setTab = function(tabName) {
+    // Esconde todos os painéis e remove a classe ativa dos botões
     document.querySelectorAll('.panel').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
     document.querySelectorAll('.pill').forEach(el => el.classList.remove('active'));
+    
+    // Mostra o painel selecionado
     const panel = document.getElementById('tab-' + tabName);
-    if(panel) { panel.style.display = 'block'; setTimeout(() => panel.classList.add('active'), 10); }
+    if(panel) { 
+        panel.style.display = 'block'; 
+        setTimeout(() => panel.classList.add('active'), 10); 
+    }
+    
+    // Destaca o botão correspondente
     document.querySelectorAll('.pill').forEach(b => { 
         const txt = b.innerText.toLowerCase();
-        if(txt.includes(tabName === 'home' ? 'visão' : tabName === 'history' ? 'histórico' : tabName === 'calculator' ? 'calculadora' : tabName === 'analytics' ? 'performance' : tabName)) b.classList.add('active'); 
+        // Mapeamento de nomes para garantir que o botão fique ativo
+        if(
+            (tabName === 'welcome' && txt.includes('início')) ||
+            (tabName === 'home' && txt.includes('visão')) ||
+            (tabName === 'history' && txt.includes('histórico')) ||
+            (tabName === 'calculator' && txt.includes('calculadora')) ||
+            (tabName === 'analytics' && txt.includes('performance')) ||
+            (tabName === 'checklist' && txt.includes('checklist'))
+        ) {
+            b.classList.add('active'); 
+        }
     });
+    
     if(tabName === 'analytics') renderChart();
     if(tabName === 'checklist') verificarChecklists();
     if(tabName === 'history') renderHistory();
@@ -307,7 +326,7 @@ window.salvarOperacao = async function() {
         await sb.from('trader_perfil').update({ score: novoScore }).eq('user_id', currentUser.id);
 
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Registrado! +${ptsChange} pts`, showConfirmButton: false, timer: 3000, background: '#121212', color: '#fff' });
-        await carregarTudo(); setTab('home');
+        await carregarTudo(); setTab('welcome');
     } catch (e) { console.error(e); }
 }
 
