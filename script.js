@@ -75,7 +75,7 @@ async function login() {
 
 async function logout() { await sb.auth.signOut(); location.reload(); }
 
-// --- CADASTRO (SEM TRIAL AUTOMÁTICO) ---
+// --- CADASTRO (COM TRIAL AUTOMÁTICO DE 7 DIAS PELO BANCO) ---
 async function cadastro() {
     const nome = document.getElementById('reg-name').value;
     const phone = document.getElementById('reg-phone').value;
@@ -87,40 +87,39 @@ async function cadastro() {
     msg.innerText = "Criando sua conta...";
 
     try {
-        // 1. Cria o Login
+        // 1. Cria o Login na Autenticação
         const { data, error } = await sb.auth.signUp({ email, password });
         if (error) { msg.innerText = "Erro: " + error.message; return; }
 
         if (data.user) {
-            // 2. Verifica se JÁ PAGOU na Lastlink
+            // 2. Verifica se JÁ PAGOU na Lastlink antes de criar a conta
             const { data: compra } = await sb.from('compras_lastlink').select('*').eq('email', email).single();
             
-            // LÓGICA ALTERADA: Padrão agora é 'pendente' (sem acesso)
-            let statusInicial = 'pendente'; 
-            if (compra) statusInicial = 'ativo'; // Só libera se já tiver o registro de compra
-
-            // Data de fim é AGORA (sem os 30 dias de presente)
-            const dataHoje = new Date();
-            // REMOVIDO: dataHoje.setDate(dataHoje.getDate() + 30); 
-            const dataFim = dataHoje.toISOString();
-
-            // 4. Salva no Banco
-            await sb.from('trader_perfil').insert([{ 
+            // 3. Monta o pacote básico (SEM ENVIAR status e trial, para o banco aplicar o padrão)
+            let perfilData = { 
                 user_id: data.user.id, 
                 nome: nome,
                 telefone: phone,
                 email: email,
                 score: 0, 
-                nivel: 'Iniciante',
-                status_assinatura: statusInicial,
-                fim_trial: dataFim
-            }]);
+                nivel: 'Iniciante'
+            };
 
-            if(statusInicial === 'ativo') {
+            // Se ele já pagou antes (e-mail na lista VIP), a gente força o status para ativo
+            let ehVIP = false;
+            if (compra) { 
+                perfilData.status_assinatura = 'ativo';
+                ehVIP = true;
+            }
+
+            // 4. Salva no Banco de Dados
+            await sb.from('trader_perfil').insert([perfilData]);
+
+            // 5. Alerta de Boas-Vindas personalizado
+            if(ehVIP) {
                 alert("Pagamento confirmado! Bem-vindo ao Trader PRO.");
             } else {
-                // Mensagem atualizada
-                alert("Conta criada! Realize a assinatura para liberar seu acesso.");
+                alert("Conta criada com sucesso! Você ganhou 7 dias de acesso grátis.");
             }
             toggleAuth('login');
         }
@@ -156,16 +155,16 @@ async function carregarTudo() {
     // Busca Perfil
     let { data: perfil, error } = await sb.from('trader_perfil').select('*').eq('user_id', currentUser.id).single();
 
-    // Fallback se não existir perfil (Também sem trial automático)
+    // Fallback se não existir perfil criado na tabela
     if (!perfil || error) {
         const nomeProv = currentUser.email.split('@')[0];
-        const dataHoje = new Date(); 
-        // REMOVIDO: dataHoje.setDate(dataHoje.getDate() + 30);
         
+        // Removemos o status e a data daqui também! O '.select().single()' pega de volta os dados com os 7 dias gerados pelo banco.
         const { data: novo } = await sb.from('trader_perfil').insert([{ 
-            user_id: currentUser.id, nome: nomeProv, score: 0, status_assinatura: 'pendente', fim_trial: dataHoje.toISOString() 
+            user_id: currentUser.id, nome: nomeProv, score: 0 
         }]).select().single();
-        perfil = novo || { nome: nomeProv, score: 0, status_assinatura: 'pendente', fim_trial: dataHoje.toISOString() };
+        
+        perfil = novo || { nome: nomeProv, score: 0, status_assinatura: 'teste_gratis' };
     }
 
     // --- CATRACA (BLOQUEIO) ---
@@ -179,7 +178,7 @@ async function carregarTudo() {
         acessoLiberado = true;
     } else {
         if (hoje < dataFim) {
-            acessoLiberado = true; // Só entra aqui se a Lastlink enviar um trial via Webhook ou update manual
+            acessoLiberado = true;
             diasRestantes = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
         } else {
             acessoLiberado = false;
@@ -191,7 +190,7 @@ async function carregarTudo() {
             <div style="text-align:center; padding:50px; color:#fff;">
                 <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-lock-2-line"></i></h1>
                 <h2>Acesso Bloqueado</h2>
-                <p>Para acessar o Trader PRO, é necessário uma assinatura ativa.</p>
+                <p>Seu período de teste expirou ou sua assinatura está pendente.</p>
                 <br>
                 <a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
                 <br><br>
@@ -200,14 +199,14 @@ async function carregarTudo() {
         return; 
     }
 
-    // AVISO DE TRIAL (Só aparece se tiver trial ativo vindo de fora)
-    if (perfil.status_assinatura !== 'ativo' && diasRestantes > 0 && diasRestantes <= 30) {
+    // AVISO DE TRIAL (Mostra a barrinha se não for VIP e ainda tiver dias)
+    if (perfil.status_assinatura !== 'ativo' && diasRestantes > 0) {
         const avisoId = 'trial-warning';
         if(!document.getElementById(avisoId)){
             const aviso = document.createElement('div');
             aviso.id = avisoId;
             aviso.style = "background:#e67e22; color:#fff; text-align:center; padding:5px; font-size:0.8rem; font-weight:bold;";
-            aviso.innerText = `🔥 Período de Teste: Restam ${diasRestantes} dias.`;
+            aviso.innerText = `🔥 Período de Teste: Restam ${diasRestantes} dias para o fim do seu acesso grátis.`;
             document.body.prepend(aviso);
         }
     }
