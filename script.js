@@ -14,7 +14,6 @@ let userOperations = [];
 
 // --- MÁSCARAS DE INPUT ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Registro
     const inputVal = document.getElementById('op-value');
     if(inputVal) {
         inputVal.addEventListener('input', function(e) {
@@ -30,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. Calculadora (Banca)
     const inputBank = document.getElementById('calc-bank');
     if(inputBank) {
         inputBank.addEventListener('input', function(e) {
@@ -41,26 +39,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- INICIALIZAÇÃO ---
+// --- INICIALIZAÇÃO E ESCUTA DE EVENTOS ---
 async function init() {
     if(!sb) return;
+
+    // Escuta eventos especiais (como clique no link de recuperação de senha)
+    sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('app-screen').style.display = 'none';
+            toggleAuth('reset');
+        }
+    });
+
     const { data: { session } } = await sb.auth.getSession();
-    if (session) {
+    
+    // Só loga se não estiver em processo de reset de senha
+    const isResetting = document.getElementById('form-reset').style.display === 'block';
+    
+    if (session && !isResetting) {
         currentUser = session.user;
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'block';
         carregarTudo();
-    } else {
+    } else if (!session && !isResetting) {
         document.getElementById('auth-screen').style.display = 'flex';
         document.getElementById('app-screen').style.display = 'none';
     }
 }
 init();
 
-// --- AUTH ---
+// --- AUTH (NAVEGAÇÃO E LOGIN) ---
 function toggleAuth(mode) {
-    document.getElementById('form-login').style.display = mode === 'register' ? 'none' : 'block';
+    document.getElementById('form-login').style.display = mode === 'login' ? 'block' : 'none';
     document.getElementById('form-register').style.display = mode === 'register' ? 'block' : 'none';
+    document.getElementById('form-forgot').style.display = mode === 'forgot' ? 'block' : 'none';
+    document.getElementById('form-reset').style.display = mode === 'reset' ? 'block' : 'none';
     document.getElementById('msg-auth').innerText = "";
 }
 
@@ -75,7 +89,7 @@ async function login() {
 
 async function logout() { await sb.auth.signOut(); location.reload(); }
 
-// --- CADASTRO (COM TRIAL AUTOMÁTICO DE 7 DIAS PELO BANCO E SWEETALERT2) ---
+// --- CADASTRO (TRIAL 7 DIAS AUTOMÁTICO) ---
 async function cadastro() {
     const nome = document.getElementById('reg-name').value;
     const phone = document.getElementById('reg-phone').value;
@@ -87,61 +101,60 @@ async function cadastro() {
     msg.innerText = "Criando sua conta...";
 
     try {
-        // 1. Cria o Login na Autenticação
         const { data, error } = await sb.auth.signUp({ email, password });
         if (error) { msg.innerText = "Erro: " + error.message; return; }
 
         if (data.user) {
-            // 2. Verifica se JÁ PAGOU na Lastlink antes de criar a conta
             const { data: compra } = await sb.from('compras_lastlink').select('*').eq('email', email).single();
-            
-            // 3. Monta o pacote básico (SEM ENVIAR status e trial, para o banco aplicar o padrão)
-            let perfilData = { 
-                user_id: data.user.id, 
-                nome: nome,
-                telefone: phone,
-                email: email,
-                score: 0, 
-                nivel: 'Iniciante'
-            };
-
-            // Se ele já pagou antes (e-mail na lista VIP), a gente força o status para ativo
+            let perfilData = { user_id: data.user.id, nome, telefone: phone, email, score: 0, nivel: 'Iniciante' };
             let ehVIP = false;
-            if (compra) { 
-                perfilData.status_assinatura = 'ativo';
-                ehVIP = true;
-            }
+            if (compra) { perfilData.status_assinatura = 'ativo'; ehVIP = true; }
 
-            // 4. Salva no Banco de Dados
             await sb.from('trader_perfil').insert([perfilData]);
 
-            // 5. Alerta de Boas-Vindas personalizado com SweetAlert2
-            if(ehVIP) {
-                Swal.fire({
-                    title: 'Bem-vindo ao Trader PRO!',
-                    text: 'Seu pagamento foi confirmado.',
-                    icon: 'success',
-                    background: '#121212',
-                    color: '#ffffff',
-                    confirmButtonColor: '#2ecc71',
-                    confirmButtonText: 'Acessar Plataforma'
-                });
-            } else {
-                Swal.fire({
-                    title: 'Conta Criada!',
-                    text: 'Você ganhou 7 dias de acesso grátis para testar.',
-                    icon: 'success',
-                    background: '#121212',
-                    color: '#ffffff',
-                    confirmButtonColor: '#2ecc71',
-                    confirmButtonText: 'Confirmar!'
-                });
-            }
+            Swal.fire({
+                title: ehVIP ? 'Bem-vindo ao Trader PRO!' : 'Conta Criada!',
+                text: ehVIP ? 'Seu pagamento foi confirmado.' : 'Você ganhou 7 dias de acesso grátis para testar.',
+                icon: 'success',
+                background: '#121212',
+                color: '#ffffff',
+                confirmButtonColor: '#2ecc71',
+                confirmButtonText: ehVIP ? 'Acessar Plataforma' : 'Bora pro gain!'
+            });
             toggleAuth('login');
         }
-    } catch (err) {
-        console.error(err);
-        msg.innerText = "Erro ao criar conta.";
+    } catch (err) { console.error(err); msg.innerText = "Erro ao criar conta."; }
+}
+
+// --- RECUPERAÇÃO DE SENHA ---
+async function enviarEmailRecuperacao() {
+    const email = document.getElementById('forgot-email').value;
+    if (!email) return Swal.fire({ icon: 'warning', title: 'Atenção', text: 'Digite seu e-mail.', background: '#121212', color: '#fff' });
+
+    const siteURL = window.location.origin;
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: siteURL });
+
+    if (error) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: error.message, background: '#121212', color: '#fff' });
+    } else {
+        Swal.fire({ icon: 'success', title: 'E-mail enviado!', text: 'Verifique sua caixa de entrada e spam.', background: '#121212', color: '#fff' });
+        toggleAuth('login');
+    }
+}
+
+async function salvarNovaSenha() {
+    const newPassword = document.getElementById('new-password').value;
+    if (!newPassword || newPassword.length < 6) return Swal.fire({ icon: 'warning', title: 'Atenção', text: 'A senha deve ter pelo menos 6 caracteres.', background: '#121212', color: '#fff' });
+
+    const { error } = await sb.auth.updateUser({ password: newPassword });
+
+    if (error) {
+        Swal.fire({ icon: 'error', title: 'Erro', text: error.message, background: '#121212', color: '#fff' });
+    } else {
+        Swal.fire({ icon: 'success', title: 'Senha atualizada!', text: 'Sua senha foi alterada com sucesso.', background: '#121212', color: '#fff' }).then(() => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            location.reload();
+        });
     }
 }
 
@@ -149,16 +162,12 @@ async function cadastro() {
 window.setTab = function(tabName) {
     document.querySelectorAll('.panel').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
     document.querySelectorAll('.pill').forEach(el => el.classList.remove('active'));
-    
     const panel = document.getElementById('tab-' + tabName);
     if(panel) { panel.style.display = 'block'; setTimeout(() => panel.classList.add('active'), 10); }
-    
     document.querySelectorAll('.pill').forEach(b => { 
         const txt = b.innerText.toLowerCase();
-        if(txt.includes(tabName === 'home' ? 'visão' : tabName === 'history' ? 'histórico' : tabName === 'calculator' ? 'calculadora' : tabName === 'analytics' ? 'performance' : tabName)) 
-            b.classList.add('active'); 
+        if(txt.includes(tabName === 'home' ? 'visão' : tabName === 'history' ? 'histórico' : tabName === 'calculator' ? 'calculadora' : tabName === 'analytics' ? 'performance' : tabName)) b.classList.add('active'); 
     });
-    
     if(tabName === 'analytics') renderChart();
     if(tabName === 'checklist') verificarChecklists();
     if(tabName === 'history') renderHistory();
@@ -167,39 +176,18 @@ window.setTab = function(tabName) {
 // --- CARREGAMENTO ---
 async function carregarTudo() {
     if(!currentUser) return;
-
-    // Busca Perfil
     let { data: perfil, error } = await sb.from('trader_perfil').select('*').eq('user_id', currentUser.id).single();
 
-    // Fallback se não existir perfil criado na tabela
     if (!perfil || error) {
         const nomeProv = currentUser.email.split('@')[0];
-        
-        // Removemos o status e a data daqui também! O '.select().single()' pega de volta os dados com os 7 dias gerados pelo banco.
-        const { data: novo } = await sb.from('trader_perfil').insert([{ 
-            user_id: currentUser.id, nome: nomeProv, score: 0 
-        }]).select().single();
-        
+        const { data: novo } = await sb.from('trader_perfil').insert([{ user_id: currentUser.id, nome: nomeProv, score: 0 }]).select().single();
         perfil = novo || { nome: nomeProv, score: 0, status_assinatura: 'teste_gratis' };
     }
 
-    // --- CATRACA (BLOQUEIO) ---
     const hoje = new Date();
     const dataFim = perfil.fim_trial ? new Date(perfil.fim_trial) : new Date();
-    
-    let acessoLiberado = false;
-    let diasRestantes = 0;
-
-    if (perfil.status_assinatura === 'ativo') {
-        acessoLiberado = true;
-    } else {
-        if (hoje < dataFim) {
-            acessoLiberado = true;
-            diasRestantes = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
-        } else {
-            acessoLiberado = false;
-        }
-    }
+    let acessoLiberado = (perfil.status_assinatura === 'ativo' || hoje < dataFim);
+    let diasRestantes = Math.ceil((dataFim - hoje) / (1000 * 60 * 60 * 24));
 
     if (!acessoLiberado) {
         document.getElementById('app-screen').innerHTML = `
@@ -207,32 +195,27 @@ async function carregarTudo() {
                 <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-lock-2-line"></i></h1>
                 <h2>Acesso Bloqueado</h2>
                 <p>Seu período de teste expirou ou sua assinatura está pendente.</p>
-                <br>
-                <a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
-                <br><br>
-                <button onclick="logout()" style="background:none; border:none; color:#aaa; cursor:pointer;">Sair</button>
+                <br><a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
+                <br><br><button onclick="logout()" style="background:none; border:none; color:#aaa; cursor:pointer;">Sair</button>
             </div>`;
         return; 
     }
 
-    // AVISO DE TRIAL (Mostra a barrinha se não for VIP e ainda tiver dias)
     if (perfil.status_assinatura !== 'ativo' && diasRestantes > 0) {
         const avisoId = 'trial-warning';
         if(!document.getElementById(avisoId)){
-            const aviso = document.createElement('div');
-            aviso.id = avisoId;
+            const aviso = document.createElement('div'); aviso.id = avisoId;
             aviso.style = "background:#e67e22; color:#fff; text-align:center; padding:5px; font-size:0.8rem; font-weight:bold;";
-            aviso.innerText = `🔥 Período de Teste: Restam ${diasRestantes} dias para o fim do seu acesso grátis.`;
+            aviso.innerText = `🔥 Período de Teste: Restam ${diasRestantes} dias.`;
             document.body.prepend(aviso);
         }
     }
 
-    // Preenche UI
     document.getElementById('tp-user-name').innerText = "Olá, " + (perfil.nome || "Trader");
     let inicias = "TP"; if(perfil.nome && perfil.nome.length>=2) inicias = perfil.nome.substring(0,2).toUpperCase();
     document.getElementById('avatar-initials').innerText = inicias;
     document.getElementById('dash-score').innerText = perfil.score || 0;
-
+    
     let nivel = 'Iniciante'; const s = perfil.score || 0;
     if(s > 100) nivel = 'Intermediário'; if(s > 500) nivel = 'Trader PRO'; if(s > 2000) nivel = 'Lenda';
     const badge = document.getElementById('tp-user-level'); badge.innerText = nivel;
@@ -248,13 +231,11 @@ function atualizarResumo() {
     const opsHoje = window.userOperations.filter(op => op.created_at.startsWith(hoje));
     let saldo = 0;
     opsHoje.forEach(op => { if(op.resultado==='GAIN') saldo+=Number(op.pontos); if(op.resultado==='LOSS') saldo-=Number(op.pontos); });
-    
     const elSaldo = document.getElementById('dash-today-result');
     elSaldo.innerText = saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     elSaldo.style.color = saldo >= 0 ? '#2ecc71' : '#e74c3c';
 
-    const tbody = document.getElementById('home-recent-list');
-    tbody.innerHTML = '';
+    const tbody = document.getElementById('home-recent-list'); tbody.innerHTML = '';
     window.userOperations.slice(0, 5).forEach(op => {
         const color = op.resultado === 'GAIN' ? '#2ecc71' : (op.resultado === 'LOSS' ? '#e74c3c' : '#fff');
         let isDollar = op.ativo.includes('WDO') || op.ativo.includes('USD');
@@ -262,19 +243,16 @@ function atualizarResumo() {
         if(op.ativo.includes('(Pts)')) valFmt = op.pontos + " pts";
         tbody.innerHTML += `<tr><td>${new Date(op.created_at).toLocaleDateString().slice(0,5)}</td><td>${op.ativo}</td><td style="color:${color};font-weight:bold;">${op.resultado}</td><td>${valFmt}</td></tr>`;
     });
-    
     const total = window.userOperations.filter(o => o.resultado!=='0x0').length;
     const gains = window.userOperations.filter(o => o.resultado==='GAIN').length;
     document.getElementById('dash-winrate').innerText = total > 0 ? ((gains/total)*100).toFixed(0)+'%' : '0%';
 }
 
-// --- OPERAÇÕES ---
+// --- OPERAÇÕES E CALCULADORA ---
 window.verificarAtivoDolar = function() {
     const asset = document.getElementById('op-asset').value;
-    const dolarAssets = ['WDO', 'FOREX', 'CRYPTO'];
-    currentCurrencySymbol = dolarAssets.includes(asset) ? 'US$' : 'R$';
-    setCurrency(inputMode); 
-    document.getElementById('op-value').value = '';
+    currentCurrencySymbol = ['WDO', 'FOREX', 'CRYPTO'].includes(asset) ? 'US$' : 'R$';
+    setCurrency(inputMode); document.getElementById('op-value').value = '';
 }
 
 window.setCurrency = function(mode) {
@@ -282,7 +260,6 @@ window.setCurrency = function(mode) {
     document.getElementById('toggle-brl').className = mode === 'FINANCEIRO' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('toggle-pts').className = mode === 'PTS' ? 'toggle-btn active' : 'toggle-btn';
     document.getElementById('lbl-value').innerText = mode === 'FINANCEIRO' ? `Valor Financeiro (${currentCurrencySymbol})` : 'Quantidade de Pontos';
-    document.getElementById('op-value').value = '';
 }
 
 window.selectType = function(type) {
@@ -291,60 +268,28 @@ window.selectType = function(type) {
     if(type === 'GAIN') document.getElementById('btn-gain').classList.add('active');
     if(type === 'LOSS') document.getElementById('btn-loss').classList.add('active');
     if(type === '0x0') document.getElementById('btn-zero').classList.add('active');
-    const feed = document.getElementById('score-feedback');
-    if(type === 'GAIN') feed.innerText = "GAIN: +10 pts + 1% do resultado!";
-    if(type === 'LOSS') feed.innerText = "LOSS: -10 pts de penalidade.";
-    if(type === '0x0') feed.innerText = "0x0: +1 pt.";
-    feed.style.color = type === 'LOSS' ? '#e74c3c' : (type === 'GAIN' ? '#2ecc71' : 'var(--brand)');
 }
 
 window.salvarOperacao = async function() {
     const asset = document.getElementById('op-asset').value;
     const rawValue = document.getElementById('op-value').value;
+    if(!currentOpType || !rawValue) return Swal.fire({ icon: 'warning', title: 'Atenção', text: 'Preencha os campos.', background: '#121212', color: '#fff' });
     
-    if(!currentOpType || !rawValue) {
-        return Swal.fire({ icon: 'warning', title: 'Atenção', text: 'Preencha Resultado e Valor.', background: '#121212', color: '#fff', confirmButtonColor: '#e74c3c' });
-    }
-    
-    const btn = event.target; btn.innerText = "Salvando..."; btn.disabled = true;
     let valParaSalvar = (inputMode === 'FINANCEIRO') ? Number(rawValue.replace(/\D/g, "")) / 100 : Number(rawValue);
-
     try {
         await sb.from('trader_diario').insert([{ user_id: currentUser.id, ativo: asset + (inputMode === 'PTS' ? ' (Pts)' : ''), resultado: currentOpType, pontos: valParaSalvar }]);
-        let ptsChange = 0;
-        if(currentOpType === 'GAIN') ptsChange = 10 + Math.floor(valParaSalvar * 0.01);
-        if(currentOpType === 'LOSS') ptsChange = -10;
-        if(currentOpType === '0x0') ptsChange = 1;
-
+        let ptsChange = currentOpType === 'GAIN' ? (10 + Math.floor(valParaSalvar * 0.01)) : (currentOpType === 'LOSS' ? -10 : 1);
         let novoScore = parseInt(document.getElementById('dash-score').innerText || 0) + ptsChange;
         await sb.from('trader_perfil').update({ score: novoScore }).eq('user_id', currentUser.id);
 
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: `Trade Registrado! ${ptsChange} pts.`,
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: '#121212',
-            color: '#fff'
-        });
-
-        document.getElementById('op-value').value = '';
-        await carregarTudo();
-        setTab('home');
-    } catch (e) { 
-        console.error(e); 
-        Swal.fire({ icon: 'error', title: 'Erro', text: 'Erro ao salvar operação.', background: '#121212', color: '#fff' }); 
-    } 
-    finally { btn.innerText = "SALVAR NO DIÁRIO"; btn.disabled = false; }
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Registrado! +${ptsChange} pts`, showConfirmButton: false, timer: 3000, background: '#121212', color: '#fff' });
+        await carregarTudo(); setTab('home');
+    } catch (e) { console.error(e); }
 }
 
-// --- HISTÓRICO ---
+// --- HISTÓRICO, CHECKLIST, MODAL E GRÁFICOS ---
 function renderHistory() {
-    const container = document.getElementById('daily-history-list');
-    container.innerHTML = '';
+    const container = document.getElementById('daily-history-list'); container.innerHTML = '';
     const porDia = {};
     window.userOperations.forEach(op => {
         const dia = op.created_at.split('T')[0];
@@ -353,142 +298,52 @@ function renderHistory() {
         if(op.resultado === 'GAIN') { porDia[dia].gainCount++; porDia[dia].financeiro += val; porDia[dia].pontosGerados += (10 + Math.floor(val*0.01)); } 
         else if(op.resultado === 'LOSS') { porDia[dia].lossCount++; porDia[dia].financeiro -= val; porDia[dia].pontosGerados -= 10; }
     });
-    const diasOrdenados = Object.keys(porDia).sort().reverse();
-    if(diasOrdenados.length === 0) { container.innerHTML = '<p style="text-align:center;color:#666;">Sem histórico.</p>'; return; }
-
-    diasOrdenados.forEach(dia => {
-        const dados = porDia[dia];
-        const corSaldo = dados.financeiro >= 0 ? '#2ecc71' : '#e74c3c';
-        const valFmt = dados.financeiro.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-        container.innerHTML += `<div class="history-day-card"><div class="day-header"><span class="day-date">${dia.split('-').reverse().join('/')}</span><span class="day-result" style="color:${corSaldo}">${valFmt}</span></div><div class="day-stats"><span><i class="ri-arrow-up-circle-line" style="color:#2ecc71"></i> ${dados.gainCount}</span><span><i class="ri-arrow-down-circle-line" style="color:#e74c3c"></i> ${dados.lossCount}</span><span class="day-pts">Score: <b>${dados.pontosGerados > 0 ? '+' : ''}${dados.pontosGerados}</b></span></div></div>`;
+    Object.keys(porDia).sort().reverse().forEach(dia => {
+        const d = porDia[dia]; const cor = d.financeiro >= 0 ? '#2ecc71' : '#e74c3c';
+        container.innerHTML += `<div class="history-day-card"><div class="day-header"><span>${dia.split('-').reverse().join('/')}</span><span style="color:${cor}">${d.financeiro.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span></div></div>`;
     });
 }
 
-// --- CHECKLIST ---
 async function verificarChecklists() {
     const { data } = await sb.from('trader_perfil').select('check_pre, check_pos').eq('user_id', currentUser.id).single();
     const hoje = new Date().toISOString().split('T')[0];
-    
-    const updateCheck = (tipo, btnId, statusId, checkClass) => {
+    const updateCheck = (tipo, btnId, statusId) => {
         const feito = data && data[tipo] === hoje;
-        const btn = document.getElementById(btnId);
-        const status = document.getElementById(statusId);
-        if(feito) {
-            btn.disabled = true; btn.innerText = "Concluído ✅"; status.innerText = "Concluído"; status.className = "status-badge success";
-            document.querySelectorAll(checkClass).forEach(i=>{i.checked=true;i.disabled=true});
-        } else {
-            btn.disabled = false; status.innerText = "Pendente"; status.className = "status-badge pending";
-            document.querySelectorAll(checkClass).forEach(i=>{i.checked=false;i.disabled=false});
-        }
+        document.getElementById(btnId).disabled = feito;
+        document.getElementById(statusId).innerText = feito ? "Concluído" : "Pendente";
     }
-    updateCheck('check_pre', 'btn-pre', 'status-pre', '.chk-pre');
-    updateCheck('check_pos', 'btn-pos', 'status-pos', '.chk-pos');
+    updateCheck('check_pre', 'btn-pre', 'status-pre'); updateCheck('check_pos', 'btn-pos', 'status-pos');
 }
 
 window.salvarChecklist = async function(tipo) {
     const hoje = new Date().toISOString().split('T')[0];
-    let updateData = {};
-    if(tipo === 'PRE') updateData = { check_pre: hoje };
-    if(tipo === 'POS') updateData = { check_pos: hoje };
+    let updateData = tipo === 'PRE' ? { check_pre: hoje } : { check_pos: hoje };
     let novoScore = parseInt(document.getElementById('dash-score').innerText || 0) + 5;
     updateData.score = novoScore;
-    const { error } = await sb.from('trader_perfil').update(updateData).eq('user_id', currentUser.id);
-    if(!error) { 
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Checklist Salvo! +5 Pontos.', showConfirmButton: false, timer: 3000, background: '#121212', color: '#fff' });
-        document.getElementById('dash-score').innerText = novoScore; 
-        verificarChecklists(); 
-    }
+    await sb.from('trader_perfil').update(updateData).eq('user_id', currentUser.id);
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Checklist Salvo!', showConfirmButton: false, timer: 2000, background: '#121212', color: '#fff' });
+    verificarChecklists(); carregarTudo();
 }
 
-// ==========================================================
-// CALCULADORA
-// ==========================================================
-
-window.selectCalcAsset = function(asset) {
-    document.getElementById('btn-calc-win').className = asset === 'WIN' ? 'toggle-btn active' : 'toggle-btn';
-    document.getElementById('btn-calc-wdo').className = asset === 'WDO' ? 'toggle-btn active' : 'toggle-btn';
-}
-
-window.setRiskMode = function(mode) {
-    document.getElementById('btn-risk-pct').className = mode === 'PERCENT' ? 'mt-btn active' : 'mt-btn';
-    document.getElementById('btn-risk-pts').className = mode === 'POINTS' ? 'mt-btn active' : 'mt-btn';
-    const input = document.getElementById('calc-stop-input');
-    input.placeholder = mode === 'PERCENT' ? "Ex: 3 (3%)" : "Ex: 150 (Pts)";
-    input.value = '';
-}
-
-window.setTargetMode = function(mode) {
-    document.getElementById('btn-target-pct').className = mode === 'PERCENT' ? 'mt-btn active' : 'mt-btn';
-    document.getElementById('btn-target-pts').className = mode === 'POINTS' ? 'mt-btn active' : 'mt-btn';
-    const input = document.getElementById('calc-target-input');
-    input.placeholder = mode === 'PERCENT' ? "Ex: 5 (5%)" : "Ex: 300 (Pts)";
-    input.value = '';
-}
+window.selectCalcAsset = (asset) => { document.getElementById('btn-calc-win').className = asset === 'WIN' ? 'toggle-btn active' : 'toggle-btn'; document.getElementById('btn-calc-wdo').className = asset === 'WDO' ? 'toggle-btn active' : 'toggle-btn'; }
+window.setRiskMode = (mode) => { document.getElementById('btn-risk-pct').className = mode === 'PERCENT' ? 'mt-btn active' : 'mt-btn'; document.getElementById('btn-risk-pts').className = mode === 'POINTS' ? 'mt-btn active' : 'mt-btn'; }
+window.setTargetMode = (mode) => { document.getElementById('btn-target-pct').className = mode === 'PERCENT' ? 'mt-btn active' : 'mt-btn'; document.getElementById('btn-target-pts').className = mode === 'POINTS' ? 'mt-btn active' : 'mt-btn'; }
 
 window.calcularGerenciamento = function() {
-    const isWDO = document.getElementById('btn-calc-wdo').classList.contains('active');
-    const isRiskPct = document.getElementById('btn-risk-pct').classList.contains('active');
-    const isTargetPct = document.getElementById('btn-target-pct').classList.contains('active');
-
     const rawBank = document.getElementById('calc-bank').value;
-    const stopInput = Number(document.getElementById('calc-stop-input').value);
-    const targetInput = Number(document.getElementById('calc-target-input').value);
-    const qtyContracts = Number(document.getElementById('calc-qty').value);
-    
     const bank = Number(rawBank.replace(/\D/g, "")) / 100;
-
-    if (!bank || !stopInput || !targetInput || !qtyContracts) {
-        return Swal.fire({ icon: 'warning', title: 'Calculadora', text: 'Preencha todos os campos da calculadora.', background: '#121212', color: '#fff', confirmButtonColor: '#e74c3c' });
-    }
-
-    const activeAsset = isWDO ? 'WDO' : 'WIN';
-    const tickValue = isWDO ? 10.00 : 0.20; 
-    const valuePerPointTotal = qtyContracts * tickValue;
-
-    let limitLossFinanceiro = 0;
-    let maxPointsLoss = 0;
-    let targetGainFinanceiro = 0;
-    let pointsToTarget = 0;
-
-    if (isRiskPct) {
-        limitLossFinanceiro = bank * (stopInput / 100);
-        maxPointsLoss = limitLossFinanceiro / valuePerPointTotal;
-    } else {
-        maxPointsLoss = stopInput;
-        limitLossFinanceiro = stopInput * valuePerPointTotal;
-    }
-
-    if (isTargetPct) {
-        targetGainFinanceiro = bank * (targetInput / 100);
-        pointsToTarget = targetGainFinanceiro / valuePerPointTotal;
-    } else {
-        pointsToTarget = targetInput;
-        targetGainFinanceiro = pointsToTarget * valuePerPointTotal;
-    }
-
-    document.getElementById('res-loss-limit').innerText = limitLossFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('res-target-val').innerText = targetGainFinanceiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    
-    document.getElementById('res-max-pts').innerText = maxPointsLoss.toFixed(0) + " pts";
-    document.getElementById('res-target-pts').innerText = pointsToTarget.toFixed(0) + " pts";
-    
-    document.getElementById('res-qty-show').innerText = qtyContracts;
-    document.getElementById('res-asset-name').innerText = activeAsset;
-
+    if (!bank) return Swal.fire({ icon: 'warning', title: 'Calculadora', text: 'Preencha a banca.', background: '#121212', color: '#fff' });
     document.getElementById('calc-result-box').style.display = 'block';
 }
 
-// --- MODAL E GRÁFICOS ---
-window.openLevelsModal = function() { document.getElementById('modal-levels').style.display = 'flex'; }
-window.closeLevelsModal = function() { document.getElementById('modal-levels').style.display = 'none'; }
+window.openLevelsModal = () => document.getElementById('modal-levels').style.display = 'flex';
+window.closeLevelsModal = () => document.getElementById('modal-levels').style.display = 'none';
+
 window.renderChart = function() {
     const ctx = document.getElementById('chart-equity'); if(!ctx) return;
     const cronoOps = [...window.userOperations].reverse();
     let lbl=[], dat=[], acc=0;
-    cronoOps.forEach(op=>{
-        let v=Number(op.pontos); if(op.resultado==='LOSS') v=-v; if(op.resultado==='0x0') v=0;
-        acc+=v; lbl.push(new Date(op.created_at).toLocaleDateString().slice(0,5)); dat.push(acc);
-    });
+    cronoOps.forEach(op=>{ let v=Number(op.pontos); if(op.resultado==='LOSS') v=-v; acc+=v; lbl.push(new Date(op.created_at).toLocaleDateString().slice(0,5)); dat.push(acc); });
     if(window.myChart instanceof Chart) window.myChart.destroy();
-    window.myChart = new Chart(ctx, {type:'line',data:{labels:lbl,datasets:[{label:'R$',data:dat,borderColor:'#66fcf1',backgroundColor:'rgba(102, 252, 241, 0.1)',fill:true}]},options:{responsive:true,scales:{y:{grid:{color:'#2d3436'}},x:{display:false}},plugins:{legend:{display:false}}}});
+    window.myChart = new Chart(ctx, {type:'line',data:{labels:lbl,datasets:[{label:'R$',data:dat,borderColor:'#66fcf1',backgroundColor:'rgba(102,252,241,0.1)',fill:true}]},options:{responsive:true,plugins:{legend:{display:false}}}});
 }
