@@ -190,7 +190,7 @@ async function carregarTudo() {
             <div style="text-align:center; padding:50px; color:#fff;">
                 <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-lock-2-line"></i></h1>
                 <h2>Acesso Bloqueado</h2>
-                <p>Seu período de teste expirou ou sua assinatura está pendente.</p>
+                <p>Seu período de teste expirou ou sua assinatura está pendente!</p>
                 <br>
                 <a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
                 <br><br>
