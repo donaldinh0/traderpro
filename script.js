@@ -37,6 +37,30 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.value = number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         });
     }
+
+    // --- SUPORTE A TECLA ENTER (AUTH) ---
+    const bindEnter = (inputId, actionFunction) => {
+        const el = document.getElementById(inputId);
+        if (el) {
+            el.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') actionFunction();
+            });
+        }
+    };
+
+    // Aplica o "Enter" nos campos de Login
+    bindEnter('email', login);
+    bindEnter('password', login);
+
+    // Aplica o "Enter" nos campos de Cadastro
+    bindEnter('reg-name', cadastro);
+    bindEnter('reg-phone', cadastro);
+    bindEnter('reg-email', cadastro);
+    bindEnter('reg-password', cadastro);
+
+    // Aplica o "Enter" na Recuperação e Nova Senha
+    bindEnter('forgot-email', enviarEmailRecuperacao);
+    bindEnter('new-password', salvarNovaSenha);
 });
 
 // --- INICIALIZAÇÃO E ESCUTA DE EVENTOS ---
