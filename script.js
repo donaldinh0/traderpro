@@ -134,7 +134,7 @@ async function cadastro() {
                     background: '#121212',
                     color: '#ffffff',
                     confirmButtonColor: '#2ecc71',
-                    confirmButtonText: 'Bora pro gain!'
+                    confirmButtonText: 'Confirmar!'
                 });
             }
             toggleAuth('login');
