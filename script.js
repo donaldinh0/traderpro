@@ -75,7 +75,7 @@ async function login() {
 
 async function logout() { await sb.auth.signOut(); location.reload(); }
 
-// --- CADASTRO (COM TRIAL AUTOMÁTICO DE 7 DIAS PELO BANCO) ---
+// --- CADASTRO (COM TRIAL AUTOMÁTICO DE 7 DIAS PELO BANCO E SWEETALERT2) ---
 async function cadastro() {
     const nome = document.getElementById('reg-name').value;
     const phone = document.getElementById('reg-phone').value;
@@ -115,11 +115,27 @@ async function cadastro() {
             // 4. Salva no Banco de Dados
             await sb.from('trader_perfil').insert([perfilData]);
 
-            // 5. Alerta de Boas-Vindas personalizado
+            // 5. Alerta de Boas-Vindas personalizado com SweetAlert2
             if(ehVIP) {
-                alert("Pagamento confirmado! Bem-vindo ao Trader PRO.");
+                Swal.fire({
+                    title: 'Bem-vindo ao Trader PRO!',
+                    text: 'Seu pagamento foi confirmado.',
+                    icon: 'success',
+                    background: '#121212',
+                    color: '#ffffff',
+                    confirmButtonColor: '#2ecc71',
+                    confirmButtonText: 'Acessar Plataforma'
+                });
             } else {
-                alert("Conta criada com sucesso! Você ganhou 7 dias de acesso grátis.");
+                Swal.fire({
+                    title: 'Conta Criada!',
+                    text: 'Você ganhou 7 dias de acesso grátis para testar.',
+                    icon: 'success',
+                    background: '#121212',
+                    color: '#ffffff',
+                    confirmButtonColor: '#2ecc71',
+                    confirmButtonText: 'Bora pro gain!'
+                });
             }
             toggleAuth('login');
         }
@@ -190,7 +206,7 @@ async function carregarTudo() {
             <div style="text-align:center; padding:50px; color:#fff;">
                 <h1 style="color:var(--loss); font-size:3rem;"><i class="ri-lock-2-line"></i></h1>
                 <h2>Acesso Bloqueado</h2>
-                <p>Seu período de teste expirou ou sua assinatura está pendente!</p>
+                <p>Seu período de teste expirou ou sua assinatura está pendente.</p>
                 <br>
                 <a href="https://lastlink.com/p/C495D678C/checkout-payment/" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-block; max-width:300px;">ASSINAR AGORA</a>
                 <br><br>
@@ -285,7 +301,10 @@ window.selectType = function(type) {
 window.salvarOperacao = async function() {
     const asset = document.getElementById('op-asset').value;
     const rawValue = document.getElementById('op-value').value;
-    if(!currentOpType || !rawValue) return alert("Preencha Resultado e Valor.");
+    
+    if(!currentOpType || !rawValue) {
+        return Swal.fire({ icon: 'warning', title: 'Atenção', text: 'Preencha Resultado e Valor.', background: '#121212', color: '#fff', confirmButtonColor: '#e74c3c' });
+    }
     
     const btn = event.target; btn.innerText = "Salvando..."; btn.disabled = true;
     let valParaSalvar = (inputMode === 'FINANCEIRO') ? Number(rawValue.replace(/\D/g, "")) / 100 : Number(rawValue);
@@ -300,11 +319,25 @@ window.salvarOperacao = async function() {
         let novoScore = parseInt(document.getElementById('dash-score').innerText || 0) + ptsChange;
         await sb.from('trader_perfil').update({ score: novoScore }).eq('user_id', currentUser.id);
 
-        alert(`Trade Registrado! ${ptsChange} pts.`);
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `Trade Registrado! ${ptsChange} pts.`,
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#121212',
+            color: '#fff'
+        });
+
         document.getElementById('op-value').value = '';
         await carregarTudo();
         setTab('home');
-    } catch (e) { console.error(e); alert("Erro ao salvar."); } 
+    } catch (e) { 
+        console.error(e); 
+        Swal.fire({ icon: 'error', title: 'Erro', text: 'Erro ao salvar operação.', background: '#121212', color: '#fff' }); 
+    } 
     finally { btn.innerText = "SALVAR NO DIÁRIO"; btn.disabled = false; }
 }
 
@@ -360,7 +393,11 @@ window.salvarChecklist = async function(tipo) {
     let novoScore = parseInt(document.getElementById('dash-score').innerText || 0) + 5;
     updateData.score = novoScore;
     const { error } = await sb.from('trader_perfil').update(updateData).eq('user_id', currentUser.id);
-    if(!error) { alert("Checklist Salvo! +5 Pontos."); document.getElementById('dash-score').innerText = novoScore; verificarChecklists(); }
+    if(!error) { 
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Checklist Salvo! +5 Pontos.', showConfirmButton: false, timer: 3000, background: '#121212', color: '#fff' });
+        document.getElementById('dash-score').innerText = novoScore; 
+        verificarChecklists(); 
+    }
 }
 
 // ==========================================================
@@ -401,7 +438,7 @@ window.calcularGerenciamento = function() {
     const bank = Number(rawBank.replace(/\D/g, "")) / 100;
 
     if (!bank || !stopInput || !targetInput || !qtyContracts) {
-        return alert("Preencha todos os campos da calculadora.");
+        return Swal.fire({ icon: 'warning', title: 'Calculadora', text: 'Preencha todos os campos da calculadora.', background: '#121212', color: '#fff', confirmButtonColor: '#e74c3c' });
     }
 
     const activeAsset = isWDO ? 'WDO' : 'WIN';
